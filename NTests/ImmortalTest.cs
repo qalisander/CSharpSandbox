@@ -21,7 +21,7 @@ namespace NTests
             Assert.AreEqual(ans, Immortal.ElderAge(N, M, deduction, mod));
 
             // Assert.AreEqual((long) 5, Immortal.ElderAge(8, 5, 1, 100));
-            // Assert.AreEqual((long) 224, Immortal.ElderAge(8, 8, 0, 100007));
+            // Assert.AreEqual((lopng) 224, Immortal.ElderAge(8, 8, 0, 100007));
             // Assert.AreEqual((long) 11925, Immortal.ElderAge(25, 31, 0, 100007));
             // Assert.AreEqual((long) 4323, Immortal.ElderAge(5, 45, 3, 1000007));
             // Assert.AreEqual((long) 1586, Immortal.ElderAge(31, 39, 7, 2345));
