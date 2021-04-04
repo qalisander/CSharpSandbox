@@ -7,70 +7,64 @@ namespace NTests
     [TestFixture]
     public class LastDigitOfHugeNumber
     {
-        public struct LDCase
-        {
-            public int[] test;
-            public int expect;
-
-            public LDCase(int[] t, int e)
-            {
-                test = t;
-                expect = e;
-            }
-        }
-
-        [Ignore("Not implemented1")]
+        // [Ignore("Not implemented1")]
         [Test]
-        public void SampleTest()
+        // [TestCase(new int[0], 1)]
+        // [TestCase(new int[] { 0, 0 }, 1)]
+        // [TestCase(new int[] { 0, 0, 0 }, 0)]
+        // [TestCase(new int[] { 1, 2 }, 1)]
+        // [TestCase(new int[] { 3, 4, 5 }, 1)]
+        // [TestCase(new int[] { 4, 3, 6 }, 4)]
+        // [TestCase(new int[] { 7, 6, 21 }, 1)]
+        // [TestCase(new int[] { 12, 30, 21 }, 6)]
+        // [TestCase(new int[] { 2, 2, 2, 0 }, 4)]
+        // [TestCase(new int[] { 937640, 767456, 981242 }, 0)]
+        [TestCase(new int[] { 123232, 694022, 140249 }, 6)]
+        // [TestCase(new int[] { 499942, 898102, 846073 }, 6)]
+        public void SampleTest(int [] arr, int expected)
         {
-            Random rnd = new Random();
-            int rand1 = rnd.Next(0, 100);
-            int rand2 = rnd.Next(0, 10);
-
-            LDCase[] allCases = new LDCase[]
-            {
-                new LDCase(new int[0], 1),
-                new LDCase(new int[] { 0, 0 }, 1),
-                new LDCase(new int[] { 0, 0, 0 }, 0),
-                new LDCase(new int[] { 1, 2 }, 1),
-                new LDCase(new int[] { 3, 4, 5 }, 1),
-                new LDCase(new int[] { 4, 3, 6 }, 4),
-                new LDCase(new int[] { 7, 6, 21 }, 1),
-                new LDCase(new int[] { 12, 30, 21 }, 6),
-                new LDCase(new int[] { 2, 2, 2, 0 }, 4),
-                new LDCase(new int[] { 937640, 767456, 981242 }, 0),
-                new LDCase(new int[] { 123232, 694022, 140249 }, 6),
-                new LDCase(new int[] { 499942, 898102, 846073 }, 6),
-                new LDCase(new int[] { rand1 }, rand1 % 10),
-                new LDCase(new int[] { rand1, rand2 }, (int) Math.Pow(rand1 % 10, rand2) % 10)
-            };
-
-            for (int i = 0; i < allCases.Length; i++)
-            {
-                Assert.AreEqual(allCases[i].expect, Calculator.LastDigit(allCases[i].test));
-            }
+            Assert.AreEqual(expected, Calculator.LastDigit(arr));
         }
 
         [Test]
-        public void GetPeriodsTest()
+        public void GetPeriodsStraightforwardTest()
         {
-            var periods = Calculator.GetPeriods();
+            var periods = Calculator.GetPeriodsStraightforward();
         }
 
         [Test]
-        public void GetPeriods2Test()
+        public void GetPeriodsDoWhileTest()
         {
             Assert.AreEqual(
-                JsonConvert.SerializeObject(Calculator.GetPeriods()),
-                JsonConvert.SerializeObject(Calculator.GetPeriods2()));
+                JsonConvert.SerializeObject(Calculator.GetPeriodsStraightforward()),
+                JsonConvert.SerializeObject(Calculator.GetPeriods()));
         }
 
         [Test]
-        public void GetPeriods3Test()
+        public void GetPeriodsIterTest()
         {
             Assert.AreEqual(
-                JsonConvert.SerializeObject(Calculator.GetPeriods()),
-                JsonConvert.SerializeObject(Calculator.GetPeriods3()));
+                JsonConvert.SerializeObject(Calculator.GetPeriodsStraightforward()),
+                JsonConvert.SerializeObject(Calculator.GetPeriodsIter()));
+        }
+
+        [Test]
+        public void GetPeriodsIterRecTest()
+        {
+            Assert.AreEqual(
+                JsonConvert.SerializeObject(Calculator.GetPeriodsStraightforward()),
+                JsonConvert.SerializeObject(Calculator.GetPeriodsIterRec()));
+        }
+
+        [Test]
+        public void GetPeriodsMod()
+        {
+            var json = JsonConvert.SerializeObject(Calculator.GetPeriods(10));
+
+            var periods10 = Calculator.GetPeriods(10);
+            var periods4 = Calculator.GetPeriods(4);
+            var periods3 = Calculator.GetPeriods(3);
+            var periods2 = Calculator.GetPeriods(2);
         }
     }
 }
