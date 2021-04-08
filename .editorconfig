@@ -1,0 +1,5 @@
+
+[*]
+
+# ReSharper properties
+resharper_place_expr_method_on_single_line = true
