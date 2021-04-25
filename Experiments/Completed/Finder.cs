@@ -11,15 +11,18 @@ namespace Experiments
     {
         public static bool PathFinder(string maze)
         {
+            if(maze == ".")
+                return true;
+
             var charArray = maze.Split('\n').Select(str => str.ToCharArray()).ToArray();
             var currDots = new Queue<(int x, int y)>();
 
+            var dirs = new(int i, int j)[] { (-1, 0), (1, 0), (0, 1), (0, -1) };
             currDots.Enqueue((0,0));
             bool wFound = false;
             do
             {
                 var (i, j) = currDots.Dequeue();
-                var dirs = new(int i, int j)[] { (-1, 0), (1, 0), (0, 1), (0, -1) };
 
                 foreach (var dir in dirs)
                     CheckField(i + dir.i, j + dir.j);
@@ -53,16 +56,16 @@ namespace Experiments
         }
 
         // private static bool PathFinder(int[][] maze, int x = 0, int y = 0) =>
-        //     (x >= 0 && x < maze[0].Length) &&
-        //     (y >= 0 && y < maze.Length) &&
-        //     (maze[y][x] == 0) && (
-        //         (x + 1 == maze[0].Length && y + 1 == maze.Length) ||
-        //         (maze[y][x] = -1) == -1 && (
-        //             PathFinder(maze, x + 1, y) ||
-        //             PathFinder(maze, x - 1, y) ||
-        //             PathFinder(maze, x, y + 1) ||
-        //             PathFinder(maze, x, y - 1)));
-        //
+        //     (x >= 0 && x < maze[0].Length) 
+        //     && (y >= 0 && y < maze.Length)
+        //     && (maze[y][x] == 0) 
+        //     && ((x + 1 == maze[0].Length && y + 1 == maze.Length) 
+        //         || (maze[y][x] = -1) == -1
+        //             && (PathFinder(maze, x + 1, y) 
+        //                 || PathFinder(maze, x - 1, y) 
+        //                 || PathFinder(maze, x, y + 1) 
+        //                 || PathFinder(maze, x, y - 1)));
+        
         // public static bool PathFinder(string maze) => 
         //     PathFinder(maze.Split('\n').Select(
         //         line => line .Select(c => '.' - c).ToArray()
