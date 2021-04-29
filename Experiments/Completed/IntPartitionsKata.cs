@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace Experiments.Completed
 {
-    public class IntPartKata
+    public class IntPartitionsKata
     {
         public static string Part(long n)
         {
