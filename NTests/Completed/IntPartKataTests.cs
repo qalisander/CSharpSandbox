@@ -20,7 +20,7 @@ namespace NTests.Completed
         public void Test1(string expected, long arg)
         {
             Console.WriteLine("****** Basic Tests Small Numbers");
-            Assert.AreEqual(expected, IntPartKata.Part(arg));
+            Assert.AreEqual(expected, IntPartitionsKata.Part(arg));
         }
     }
 }
