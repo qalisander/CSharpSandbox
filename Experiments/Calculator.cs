@@ -2,57 +2,92 @@
 using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 
 namespace NTests
 {
-    public class Calculator
+    // https://www.codewars.com/kata/5518a860a73e708c0a000027/train/csharp
+
+    public static class Calculator
     {
-        public static int LastDigit(int[] array)
+        public static int LastDigit(int[] input)
         {
-            if (array.Length == 0)
+            if (input.Length == 0)
                 return 1;
 
-            // var periods = GetPeriods();
-            // var pow = array.Last();
-            //
-            // foreach(var lastDigit in array.Reverse().Skip(1))
-            // {
-            //     pow = DigitPower(lastDigit, pow);
-            // }
-            //
-            // return pow;
-            //
-            // int DigitPower(int digit, int pow)
-            // {
-            //     var periodicNums = periods[digit % 10];
-            //     var period = periodicNums.Length;
-            //
-            //     return pow == 0 ? 1 : periodicNums[(period + pow - 1) % period];
-            // }
+            ComputeZeroPow(input);
 
-            var ans = 1;
+            return input[0] == 0 ? 0 : LastDigitRec(input, 10, 0);
 
-            var periods10 = GetPeriods(10);
-            var periodicNums10 = periods10[array[0] % 10];
-
-            for (int i = 1; i < array.Length; i++)
+            int LastDigitRec(int[] nums, int mod, int i)
             {
-                var periods = GetPeriods(periodicNums10.Length);
-            }
+                if (i == nums.Length || nums[i] == 0)
+                    return 1;
 
-            return ans;
+                var isPeriodic = mod % nums[i] != 0;
+                var periodicDigits = GetPeriod(nums[i] % mod, mod).ShiftBy(-2).ToArray();
+
+                return periodicDigits.Length == 1
+                    ? periodicDigits[0]
+                    : periodicDigits[GetPeriodicId()];
+
+                int GetPeriodicId()
+                {
+                    var lastDigit = LastDigitRec(nums, periodicDigits.Length, i + 1);
+
+                    return isPeriodic
+                        ? lastDigit % periodicDigits.Length
+                        : lastDigit < periodicDigits.Length ? lastDigit : 0;
+                }
+            }
+            
+            void ComputeZeroPow(int[] ints)
+            {
+                for (var i = ints.Length - 1; i > 0; i--)
+                    if (ints[i] == 0)
+                        ints[i - 1] = 1;
+            }
         }
 
-        public static int[][] GetPeriods(int mod) =>
-            Enumerable.Range(0, mod).Select(num => GetPeriod(num, mod).ToArray()).ToArray();
-
-        private static IEnumerable<int> GetPeriod(int num, int mod)
+        public static IEnumerable<int> GetPeriod(int num, int mod)
         {
             var digit = num;
+
             do
             {
-                yield return digit;
+                yield return digit = digit * num % mod;
+
+                if (digit == 0)
+                {
+                    yield return num;
+                    yield break;
+                }
+            } while (digit != num);
+        }
+
+        public static IEnumerable<T> ShiftBy<T>(this IEnumerable<T> enumerable, int delta)
+        {
+            var arr = enumerable.ToArray();
+            var len = arr.Length;
+
+            for (var i = 0; i < len; i++)
+                yield return arr[(i + len + delta % len) % len];
+        }
+
+        //--------------------------------------------------------------------------------------
+
+        public static int[][] GetPeriods(int mod) =>
+            Enumerable.Range(0, mod).Select(num => GetPeriod1(num, mod).ToArray()).ToArray();
+
+        private static IEnumerable<int> GetPeriod1(int num, int mod)
+        {
+            var digit = num;
+
+            do
+            {
                 digit = digit * num % mod;
+
+                yield return digit;
             } while (digit != num && digit != 0); // when mod % num == 0
         }
 
@@ -64,6 +99,7 @@ namespace NTests
         private static IEnumerable<int> GetPeriod(int num)
         {
             var digit = num % 10;
+
             do
             {
                 yield return digit;

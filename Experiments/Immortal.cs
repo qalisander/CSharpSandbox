@@ -8,6 +8,8 @@ namespace Experiments
 {
     public static class Immortal
     {
+        //TODO: use int extensions methods for addition
+
         /// set true to enable debug
         public static bool Debug = false;
 
@@ -75,7 +77,6 @@ namespace Experiments
             //     ModulusLong.SumRange((ModulusLong) from, (ModulusLong) to);
         }
 
-        //TODO: create special struct with operations with module of mod
 
         public struct ModulusLong : IEquatable<ModulusLong>, IComparable<ModulusLong>
         {

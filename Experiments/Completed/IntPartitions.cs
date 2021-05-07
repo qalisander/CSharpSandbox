@@ -11,7 +11,7 @@ namespace Experiments.Completed
 
             return $"Range: {ans.Max() - ans.Min()} Average: {ans.Average():.00} Median: {Median(ans):.00}";
 
-            IEnumerable<int> PartRec(int arg, int [][] memory) => 
+            static IEnumerable<int> PartRec(int arg, int [][] memory) => 
                 memory[arg] ?? (memory[arg] = Enumerable.Range(arg, 1)
                     .Union(Enumerable.Range(1, arg / 2)
                         .SelectMany(i => PartRec(arg - i, memory).Select(x => x * i))
