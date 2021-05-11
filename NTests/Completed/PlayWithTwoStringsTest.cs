@@ -1,7 +1,7 @@
-﻿using Experiments;
+﻿using Experiments.Completed;
 using NUnit.Framework;
 
-namespace NTests
+namespace NTests.Completed
 {
     [TestFixture]
     public class PlayWithTwoStringsTest
