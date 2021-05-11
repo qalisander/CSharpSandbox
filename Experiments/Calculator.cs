@@ -27,6 +27,7 @@ namespace NTests
                 var isPeriodic = mod % nums[i] != 0;
                 var periodicDigits = GetPeriod(nums[i] % mod, mod).ShiftBy(-2).ToArray();
 
+
                 return periodicDigits.Length == 1
                     ? periodicDigits[0]
                     : periodicDigits[GetPeriodicId()];
