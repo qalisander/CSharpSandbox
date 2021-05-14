@@ -1,13 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
-using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
 
 namespace NTests
 {
     // https://www.codewars.com/kata/5518a860a73e708c0a000027/train/csharp
 
+    // TODO: GetPeriodicSequence, generate mapping function by periodic sequence, dicionary under hood
     public static class Calculator
     {
         public static int LastDigit(int[] input)
@@ -17,30 +16,26 @@ namespace NTests
 
             ComputeZeroPow(input);
 
-            return input[0] == 0 ? 0 : LastDigitRec(input, 10, 0);
+            return LastDigitRec(input, 0, 10);
 
-            int LastDigitRec(int[] nums, int mod, int i)
+            int LastDigitRec(int[] nums, int i, int mod)
             {
                 if (i == nums.Length || nums[i] == 0)
-                    return 1;
+                    return 0;
 
-                var isPeriodic = mod % nums[i] != 0;
+                // mod 2 crotch
+                if (input[i] % mod == 2 && (i + 1 >= input.Length || input[i + 1] == 1))
+                    return 2;
+
                 var periodicDigits = GetPeriod(nums[i] % mod, mod).ShiftBy(-2).ToArray();
 
-                return periodicDigits.Length == 1
-                    ? periodicDigits[0]
-                    : periodicDigits[GetPeriodicId()];
+                var periodicIndex = periodicDigits.Length == 1
+                    ? 0
+                    : LastDigitRec(nums, i + 1, periodicDigits.Length);
 
-                int GetPeriodicId()
-                {
-                    var lastDigit = LastDigitRec(nums, periodicDigits.Length, i + 1);
-
-                    return isPeriodic
-                        ? lastDigit % periodicDigits.Length
-                        : lastDigit < periodicDigits.Length ? lastDigit : 0;
-                }
+                return periodicDigits[periodicIndex];
             }
-            
+
             void ComputeZeroPow(int[] ints)
             {
                 for (var i = ints.Length - 1; i > 0; i--)
@@ -56,13 +51,7 @@ namespace NTests
             do
             {
                 yield return digit = digit * num % mod;
-
-                if (digit == 0)
-                {
-                    yield return num;
-                    yield break;
-                }
-            } while (digit != num);
+            } while (digit != num && digit != 0);
         }
 
         public static IEnumerable<T> ShiftBy<T>(this IEnumerable<T> enumerable, int delta)

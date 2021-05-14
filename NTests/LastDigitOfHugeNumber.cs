@@ -21,9 +21,12 @@ namespace NTests
         [TestCase(new [] { 7, 6, 21 }, 1)]
         [TestCase(new [] { 12, 30, 21 }, 6)]
         [TestCase(new [] { 2, 2, 2, 0 }, 4)]
+        [TestCase(new [] { 2, 14, 2, 0 }, 4)]
         [TestCase(new [] { 937640, 767456, 981242 }, 0)]
         [TestCase(new [] { 123232, 694022, 140249 }, 6)]
         [TestCase(new [] { 499942, 898102, 846073 }, 6)]
+        [TestCase(new [] { 590492, 221098 }, 4)]
+        [TestCase(new [] { 2, 2 }, 4)]
         public void SampleTest(int [] arr, int expected)
         {
             Assert.AreEqual(expected, Calculator.LastDigit(arr));
@@ -34,17 +37,18 @@ namespace NTests
         //[TestCase("[[0],[1],[6,2,4,8],[1,3,9,7],[6,4],[5],[6],[1,7,9,3],[6,8,4,2],[1,9]]", 10)]
         public void GetPeriodsTest(string expected, int num)
         {
-            Assert.AreEqual(
-                JsonConvert.SerializeObject(Calculator.GetPeriods(num)),
-                expected);
+            Assert.AreEqual(expected, 
+                JsonConvert.SerializeObject(Calculator.GetPeriods(num)));
         }
 
         [Test]
         [TestCase("[4,8,6,2]", 2, 10)]
         [TestCase("[4,2,6,8]", 8, 10)]
+        [TestCase("[1,3]", 3, 4)]
+        [TestCase("[0,2]", 2, 4)]
         public void GetPeriodSimpleTest(string expected, int num, int mod)
         {
-            Assert.AreEqual(JsonConvert.SerializeObject(Calculator.GetPeriod(num, mod)), expected);
+            Assert.AreEqual(expected, JsonConvert.SerializeObject(Calculator.GetPeriod(num, mod)));
         }
 
         [Test]
@@ -55,7 +59,7 @@ namespace NTests
         {
             var arr = JsonConvert.DeserializeObject<int[]>(arg);
 
-            Assert.AreEqual(JsonConvert.SerializeObject(arr!.ShiftBy(shift)), expected);
+            Assert.AreEqual(expected, JsonConvert.SerializeObject(arr!.ShiftBy(shift)));
         }
 
         [Test]
