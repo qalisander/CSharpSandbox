@@ -9,7 +9,6 @@ namespace NTests.Completed
     [TestFixture]
     public class LastDigitOfHugeNumber
     {
-        // [Ignore("Not implemented")]
         [Test]
         [TestCase(new int [0], 1)]
         [TestCase(new [] { 0, 0 }, 1)]
@@ -28,7 +27,49 @@ namespace NTests.Completed
         [TestCase(new [] { 2, 2 }, 4)]
         public void SampleTest(int [] arr, int expected)
         {
-            Assert.AreEqual(expected, Calculator.LastDigit(arr));
+            Assert.AreEqual(expected, Experiments.Completed.LastDigitOfHugeNumber.LastDigit(arr));
+        }
+
+        [Test]
+        [TestCase(new int [0], 1)]
+        [TestCase(new [] { 0, 0 }, 1)]
+        [TestCase(new [] { 0, 0, 0 }, 0)]
+        [TestCase(new [] { 1, 2 }, 1)]
+        [TestCase(new [] { 3, 4, 5 }, 1)]
+        [TestCase(new [] { 4, 3, 6 }, 4)]
+        [TestCase(new [] { 7, 6, 21 }, 1)]
+        [TestCase(new [] { 12, 30, 21 }, 6)]
+        [TestCase(new [] { 2, 2, 2, 0 }, 4)]
+        [TestCase(new [] { 2, 14, 2, 0 }, 4)]
+        [TestCase(new [] { 937640, 767456, 981242 }, 0)]
+        [TestCase(new [] { 123232, 694022, 140249 }, 6)]
+        [TestCase(new [] { 499942, 898102, 846073 }, 6)]
+        [TestCase(new [] { 590492, 221098 }, 4)]
+        [TestCase(new [] { 2, 2 }, 4)]
+        public void SampleTest2(int [] arr, int expected)
+        {
+            Assert.AreEqual(expected, Calculator2.LastDigit(arr));
+        }
+
+        [Test]
+        [TestCase(new int [0], 1)]
+        [TestCase(new [] { 0, 0 }, 1)]
+        [TestCase(new [] { 0, 0, 0 }, 0)]
+        [TestCase(new [] { 1, 2 }, 1)]
+        [TestCase(new [] { 3, 4, 5 }, 1)]
+        [TestCase(new [] { 4, 3, 6 }, 4)]
+        [TestCase(new [] { 7, 6, 21 }, 1)]
+        [TestCase(new [] { 12, 30, 21 }, 6)]
+        [TestCase(new [] { 2, 2, 2, 0 }, 4)]
+        [TestCase(new [] { 2, 14, 2, 0 }, 4)]
+        [TestCase(new [] { 937640, 767456, 981242 }, 0)]
+        [TestCase(new [] { 123232, 694022, 140249 }, 6)]
+        [TestCase(new [] { 499942, 898102, 846073 }, 6)]
+        [TestCase(new [] { 590492, 221098 }, 4)]
+        [TestCase(new [] { 2, 2 }, 4)]
+        public void SampleTest3(int [] arr, int expected)
+        {
+            Assert.AreEqual(expected, Calculator3.LastDigit(arr));
         }
 
         [Test]
@@ -37,7 +78,7 @@ namespace NTests.Completed
         public void GetPeriodsTest(string expected, int num)
         {
             Assert.AreEqual(expected, 
-                JsonConvert.SerializeObject(Calculator.GetPeriods(num)));
+                JsonConvert.SerializeObject(Experiments.Completed.LastDigitOfHugeNumber.GetPeriods(num)));
         }
 
         [Test]
@@ -47,7 +88,7 @@ namespace NTests.Completed
         [TestCase("[0]", 2, 4)]
         public void GetPeriodSimpleTest(string expected, int num, int mod)
         {
-            Assert.AreEqual(expected, JsonConvert.SerializeObject(Calculator.GetPeriod(num, mod)));
+            Assert.AreEqual(expected, JsonConvert.SerializeObject(Experiments.Completed.LastDigitOfHugeNumber.GetPeriod(num, mod)));
         }
 
         [Test]
@@ -64,42 +105,42 @@ namespace NTests.Completed
         [Test]
         public void GetPeriodsStraightforwardTest()
         {
-            var periods = Calculator.GetPeriodsStraightforward();
+            var periods = Experiments.Completed.LastDigitOfHugeNumber.GetPeriodsStraightforward();
         }
 
         [Test]
         public void GetPeriodsDoWhileTest()
         {
             Assert.AreEqual(
-                JsonConvert.SerializeObject(Calculator.GetPeriodsStraightforward()),
-                JsonConvert.SerializeObject(Calculator.GetPeriods()));
+                JsonConvert.SerializeObject(Experiments.Completed.LastDigitOfHugeNumber.GetPeriodsStraightforward()),
+                JsonConvert.SerializeObject(Experiments.Completed.LastDigitOfHugeNumber.GetPeriods()));
         }
 
         [Test]
         public void GetPeriodsIterTest()
         {
             Assert.AreEqual(
-                JsonConvert.SerializeObject(Calculator.GetPeriodsStraightforward()),
-                JsonConvert.SerializeObject(Calculator.GetPeriodsIter()));
+                JsonConvert.SerializeObject(Experiments.Completed.LastDigitOfHugeNumber.GetPeriodsStraightforward()),
+                JsonConvert.SerializeObject(Experiments.Completed.LastDigitOfHugeNumber.GetPeriodsIter()));
         }
 
         [Test]
         public void GetPeriodsIterRecTest()
         {
             Assert.AreEqual(
-                JsonConvert.SerializeObject(Calculator.GetPeriodsStraightforward()),
-                JsonConvert.SerializeObject(Calculator.GetPeriodsIterRec()));
+                JsonConvert.SerializeObject(Experiments.Completed.LastDigitOfHugeNumber.GetPeriodsStraightforward()),
+                JsonConvert.SerializeObject(Experiments.Completed.LastDigitOfHugeNumber.GetPeriodsIterRec()));
         }
 
         [Test]
         public void GetPeriodsMod()
         {
-            var json = JsonConvert.SerializeObject(Calculator.GetPeriods(10));
+            var json = JsonConvert.SerializeObject(Experiments.Completed.LastDigitOfHugeNumber.GetPeriods(10));
 
-            var periods10 = Calculator.GetPeriods(10);
-            var periods4 = Calculator.GetPeriods(4);
-            var periods3 = Calculator.GetPeriods(3);
-            var periods2 = Calculator.GetPeriods(2);
+            var periods10 = Experiments.Completed.LastDigitOfHugeNumber.GetPeriods(10);
+            var periods4 = Experiments.Completed.LastDigitOfHugeNumber.GetPeriods(4);
+            var periods3 = Experiments.Completed.LastDigitOfHugeNumber.GetPeriods(3);
+            var periods2 = Experiments.Completed.LastDigitOfHugeNumber.GetPeriods(2);
         }
     }
 }

@@ -6,7 +6,8 @@ using System.Numerics;
 namespace Experiments.Completed
 {
     // https://www.codewars.com/kata/5518a860a73e708c0a000027/train/csharp
-    public static class Calculator
+    // https://www.codewars.com/kata/5511b2f550906349a70004e1/train/rust
+    public static class LastDigitOfHugeNumber
     {
         public static int LastDigit(int[] input) =>
             input.Length == 0 ? 1 : LastDigitRec(input.ComputeZeroPow(), 0, 10);
@@ -151,7 +152,7 @@ namespace Experiments.Completed
             }
 
             int number = array.Last();
-            
+
             foreach (int i in array.Reverse().Skip(1))
             {
                 int power = number;
@@ -160,17 +161,21 @@ namespace Experiments.Completed
                 {
                     case 0:
                         number = 1;
+
                         break;
                     case 1:
                         number = i;
+
                         break;
                     case 2:
                         number = i * i;
+
                         break;
                     default:
                         power = (power - 3) % 4 + 3;
                         int n = i < 3 ? i : (i - 3) % 20 + 3;
-                        number = (int)Math.Pow(n, power);
+                        number = (int) Math.Pow(n, power);
+
                         break;
                 }
             }
@@ -183,8 +188,9 @@ namespace Experiments.Completed
 
     public class Calculator3
     {
-        public static int LastDigit(int[] array) => (int) (array.Reverse().Aggregate(1L,
-            (e, m) => (long) Math.Pow(m > 20 ? m % 20 + 20 : m, e > 4 ? e % 4 + 4 : e)) % 10);
+        public static int LastDigit(int[] array) =>
+            (int) (array.Reverse().Aggregate(1L, (e, m) =>
+                (long) Math.Pow(m > 20 ? m % 20 + 20 : m, e > 4 ? e % 4 + 4 : e)) % 10);
     }
 
     //------------------------------------------
@@ -211,4 +217,12 @@ namespace Experiments.Completed
             return (int) (n % 10);
         }
     }
+
+// If your language doesn't have native big integers, this solution might not work.
+//    def last_digit(lst):
+//      n = 1
+//      for x in reversed(lst):
+//      # If you write x ** (n% 4 + 4) directly, the result will be wrong when n is 0
+//      n = x ** (n if n < 4 else n % 4 + 4) 
+//      return n % 10
 }
