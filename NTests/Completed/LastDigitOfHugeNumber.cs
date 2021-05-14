@@ -1,16 +1,15 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using Experiments.Completed;
 using Newtonsoft.Json;
 using NUnit.Framework;
 
-namespace NTests
+namespace NTests.Completed
 {
     // https://swisslife-oss.github.io/snapshooter/
 
     [TestFixture]
     public class LastDigitOfHugeNumber
     {
-        // [Ignore("Not implemented1")]
+        // [Ignore("Not implemented")]
         [Test]
         [TestCase(new int [0], 1)]
         [TestCase(new [] { 0, 0 }, 1)]
@@ -45,7 +44,7 @@ namespace NTests
         [TestCase("[4,8,6,2]", 2, 10)]
         [TestCase("[4,2,6,8]", 8, 10)]
         [TestCase("[1,3]", 3, 4)]
-        [TestCase("[0,2]", 2, 4)]
+        [TestCase("[0]", 2, 4)]
         public void GetPeriodSimpleTest(string expected, int num, int mod)
         {
             Assert.AreEqual(expected, JsonConvert.SerializeObject(Calculator.GetPeriod(num, mod)));
