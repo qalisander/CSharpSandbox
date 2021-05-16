@@ -59,6 +59,20 @@ namespace NTests
                             "10000\r\n01000\r\n00100\r\n00000\r\n00000\r\n00000")
                         .SetDescription(
                             "Should_work_for_any_combination_of_loops_be_it_simple_or_nested");
+
+                    yield return new TestCaseData("*[s[e]*]", 39, 5, 5,
+                            "11000\r\n11000\r\n11000\r\n11000\r\n11000")
+                        .Returns(
+                            "11000\r\n11000\r\n11000\r\n11000\r\n11000")
+                        .SetDescription(
+                            "Your interpreter should also work with nested loops");
+
+                    yield return new TestCaseData("*[es*]*", 3000, 5, 6,
+                            "11111\r\n11111\r\n11111\r\n11111\r\n11111\r\n11111")
+                        .Returns(
+                            "11111\r\n11111\r\n11111\r\n11111\r\n11111\r\n11111")
+                        .SetDescription(
+                            "Your interpreter should exit the loop at the correct conditions");
                 }
             }
 
