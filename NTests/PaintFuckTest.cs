@@ -45,6 +45,20 @@ namespace NTests
                             "111100\r\n100010\r\n100001\r\n100010\r\n111100\r\n100000\r\n100000\r\n100000\r\n100000")
                         .SetDescription(
                             "Your interpreter should terminate normally and return a representation of the final state of the 2D datagrid when all commands have been considered from left to right even if the number of iterations specified have not been fully performed");
+
+                    yield return new TestCaseData("*e*e*e*es*h34543es*ws*ws*w*w*435345w*n*n*n*ssss*2342s*s*s*", 100, 6, 9,
+                            "111100\r\n100010\r\n100001\r\n100010\r\n111100\r\n100000\r\n100000\r\n100000\r\n100000")
+                        .Returns(
+                            "111100\r\n100010\r\n100001\r\n100010\r\n111100\r\n100000\r\n100000\r\n100000\r\n100000")
+                        .SetDescription(
+                            "Same as previou, but there are not grammar symbols");
+
+                    yield return new TestCaseData("*[es*]", 9, 5, 6,
+                            "10000\r\n01000\r\n00100\r\n00000\r\n00000\r\n00000")
+                        .Returns(
+                            "10000\r\n01000\r\n00100\r\n00000\r\n00000\r\n00000")
+                        .SetDescription(
+                            "Should_work_for_any_combination_of_loops_be_it_simple_or_nested");
                 }
             }
 
