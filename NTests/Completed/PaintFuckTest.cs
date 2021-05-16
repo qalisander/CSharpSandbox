@@ -2,7 +2,7 @@
 using Experiments;
 using NUnit.Framework;
 
-namespace NTests
+namespace NTests.Completed
 {
     public class PaintFuckTest
     {
