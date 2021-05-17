@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-public class Boolfuck
+public static class Boolfuck
 {
     // https://www.codewars.com/kata/search/my-languages?q=Esolang%20Interpreters&&beta=false
     // https://www.codewars.com/kata/5861487fdb20cff3ab000030/train/csharp
@@ -14,7 +14,10 @@ public class Boolfuck
     // https://www.c-sharpcorner.com/article/c-sharp-string-to-byte-array/
     // https://social.msdn.microsoft.com/Forums/en-US/e2403fd6-61ce-4487-b11a-fddcef40c87f/using-bitarray-with-binarywriter-streams?forum=Vsexpressvcs
 
-    // TODO: Convertion from bytes to bits array https://stackoverflow.com/questions/40541433/how-to-get-bit-values-from-byte
+    // NOTE: Convertion from bytes to bits array https://stackoverflow.com/questions/40541433/how-to-get-bit-values-from-byte
+
+    // https://stackoverflow.com/questions/3917086/convert-bitarray-to-string
+
     public static string Interpret(string code, string input)
     { // TODO: prbl use spans and create Benchmarks, spans and
         var inputEnumerator = new BitArray(Encoding.UTF8.GetBytes(input)).GetEnumerator();
@@ -62,11 +65,7 @@ public class Boolfuck
         }
         endFor:
 
-        byte[] arr = new byte[0];
-        new BitArray(output.ToArray()).CopyTo(arr, 0);
-
-        // https://stackoverflow.com/questions/3917086/convert-bitarray-to-string
-        return Encoding.ASCII.GetString(arr);
+        return Encoding.UTF8.GetString(new BitArray(output.ToArray()).ToByteArray());
 
         static IEnumerable<KeyValuePair<int, int>> ProcessBrackets(string code)
         {
@@ -85,5 +84,13 @@ public class Boolfuck
                 throw new InvalidOperationException(
                     $"input string has not valid brackets. Brackets stack: {string.Join("\t", bracketsStack)}");
         }
+    }
+
+    private static byte[] ToByteArray(this BitArray bits)
+    {
+        byte[] tmp = new byte[Math.Max(1, bits.Length)];
+        bits.CopyTo(tmp, 0);
+
+        return tmp;
     }
 }
