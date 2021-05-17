@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text;
+using System.IO;
 
 public static class Boolfuck
 {
@@ -18,9 +18,14 @@ public static class Boolfuck
 
     // https://stackoverflow.com/questions/3917086/convert-bitarray-to-string
 
-    public static string Interpret(string code, string input)
-    { // TODO: prbl use spans and create Benchmarks, spans and
-        var inputEnumerator = new BitArray(Encoding.UTF8.GetBytes(input)).GetEnumerator();
+    // TODO: prbl use spans and create Benchmarks, spans and
+
+    // TODO: prbl: use ISO_8859_1
+    public static string Interpret(string code, string input = "")
+    {
+        //Console.WriteLine($"code: {code}\n" + $"input: {input}");
+
+        var inputEnumerator = new BitArray(Encoding.ASCII.GetBytes(input)).GetEnumerator();
         // TODO: rewrite with char yield return
         var output = new List<bool>();
 
@@ -65,7 +70,7 @@ public static class Boolfuck
         }
         endFor:
 
-        return Encoding.UTF8.GetString(new BitArray(output.ToArray()).ToByteArray());
+        return Encoding.ASCII.GetString(new BitArray(output.ToArray()).ToByteArray()).Replace("?", "");
 
         static IEnumerable<KeyValuePair<int, int>> ProcessBrackets(string code)
         {
@@ -88,7 +93,10 @@ public static class Boolfuck
 
     private static byte[] ToByteArray(this BitArray bits)
     {
-        byte[] tmp = new byte[Math.Max(1, bits.Length)];
+        if (bits.Length == 0)
+            return new byte[0];
+
+        byte[] tmp = new byte[(bits.Length - 1) / 8 + 1]; // Math.Max(1, bits.Length / 8) // (bits.Length - 1) / 8 + 1
         bits.CopyTo(tmp, 0);
 
         return tmp;
