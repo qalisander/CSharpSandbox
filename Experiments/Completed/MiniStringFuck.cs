@@ -9,7 +9,7 @@ namespace Experiments.Completed
         public static string MyFirstInterpreter(string code) =>
             code.Aggregate((new StringBuilder(), (byte)0), (acml, ch) => ch switch
             {
-                '+' => (acml.Item1, acml.Item2 += 1),
+                '+' => (acml.Item1, acml.Item2 += 1), // modulo 256 (byte.Max) 
                 '.' => (acml.Item1.Append((char)acml.Item2), acml.Item2),
                 _ => acml,
             }).Item1.ToString();
