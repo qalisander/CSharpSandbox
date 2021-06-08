@@ -7,8 +7,9 @@ using System.IO;
 
 public static class Boolfuck
 {
+    // KATA: https://www.codewars.com/kata/5861487fdb20cff3ab000030/train/csharp
+
     // https://www.codewars.com/kata/search/my-languages?q=Esolang%20Interpreters&&beta=false
-    // https://www.codewars.com/kata/5861487fdb20cff3ab000030/train/csharp
 
     // C# String To Byte Array
     // https://www.c-sharpcorner.com/article/c-sharp-string-to-byte-array/
@@ -23,9 +24,12 @@ public static class Boolfuck
     // TODO: prbl: use ISO_8859_1
     public static string Interpret(string code, string input = "")
     {
-        //Console.WriteLine($"code: {code}\n" + $"input: {input}");
+        //Console.WriteLine($"code: {code}\n" + $"input: {string.Join('\t', input.ToCharArray().Select(ch => (int)ch))}");
 
-        var inputEnumerator = new BitArray(Encoding.ASCII.GetBytes(input)).GetEnumerator();
+        //if (input == "\u000d\u000c")
+        //    return "\u009c";
+
+        var inputEnumerator = new BitArray(Encoding.Latin1.GetBytes(input)).GetEnumerator();
         // TODO: rewrite with char yield return
         var output = new List<bool>();
 
@@ -62,7 +66,10 @@ public static class Boolfuck
                 case ',':
                     // TODO: use yield return
                     if (!inputEnumerator.MoveNext())
+                    {
+                        field[current] = false;
                         goto endFor;
+                    }
 
                     field[current] = (bool)inputEnumerator.Current;
                     break;
@@ -70,7 +77,7 @@ public static class Boolfuck
         }
         endFor:
 
-        return Encoding.ASCII.GetString(new BitArray(output.ToArray()).ToByteArray()).Replace("?", "");
+        return Encoding.Latin1.GetString(new BitArray(output.ToArray()).ToByteArray());
 
         static IEnumerable<KeyValuePair<int, int>> ProcessBrackets(string code)
         {
@@ -96,7 +103,8 @@ public static class Boolfuck
         if (bits.Length == 0)
             return new byte[0];
 
-        byte[] tmp = new byte[(bits.Length - 1) / 8 + 1]; // Math.Max(1, bits.Length / 8) // (bits.Length - 1) / 8 + 1
+        // Math.Max(1, bits.Length / 8) // (bits.Length - 1) / 8 + 1
+        byte[] tmp = new byte[(bits.Length - 1) / 8 + 1];
         bits.CopyTo(tmp, 0);
 
         return tmp;
