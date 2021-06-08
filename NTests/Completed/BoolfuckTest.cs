@@ -1,8 +1,8 @@
-﻿namespace Solution
-{
-    using NUnit.Framework;
-    using System;
+﻿using Experiments.Completed;
+using NUnit.Framework;
 
+namespace NTests.Completed
+{
     [TestFixture]
     public class BoolfuckTest
     {
@@ -18,7 +18,7 @@
         [TestCase("", "+", "")]
         [TestCase("", ".", "")]
         [TestCase("\u0000", ";", "")]
-        public void testSingleCommands(string expected, string code, string input)
+        public void TestSingleCommands(string expected, string code, string input)
         {
             Assert.AreEqual(expected, Boolfuck.Interpret(code, input));
 
