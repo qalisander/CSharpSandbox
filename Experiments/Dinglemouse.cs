@@ -9,6 +9,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Experiments.Completed
 {
+    // https://www.codewars.com/kata/59b47ff18bcb77a4d1000076
     public class Dinglemouse
     {
         public static int TrainCrash(
