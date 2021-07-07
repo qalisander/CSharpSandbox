@@ -1,15 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 
 using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 
 namespace Experiments
 {
     // https://www.codewars.com/kata/564d9ebde30917684f000048/train/csharp
     public class Evaluate
     {
+        // Enum of tokens
+        
         // delegate double Function(params double[] args);
         //
         // private static Dictionary<string, Function> Operations = new()
@@ -29,8 +33,10 @@ namespace Experiments
         // };
 
         // Expressions are graph and I need sort it. Topological sorting
-        abstract class Expr
+        public abstract class Expr
         {
+            public int Index { get; set; }
+
             public abstract double Eval();
 
             public abstract Expr Create(IEnumerator<string> enumerator);
@@ -96,13 +102,37 @@ namespace Experiments
         //     }
         // }
 
+        enum MyEnum
+        {
+            first,
+            second
+        }
+        
         public string Eval(string expression)
         {
+            var chars = expression.ToList();
+            Regex.Matches(expression, "regext", )
+            expression.AsSpan().Slice(0, 3).GetHashCode()
+
+            //TODO: create parsing using regexp
+            // https://docs.microsoft.com/en-us/dotnet/standard/base-types/regular-expression-options
+            // difficult to use because there are such lexemes as "sin" and "sinh"
+            //https://en.wikipedia.org/wiki/Lexical_grammar
+            // https://en.wikipedia.org/wiki/Lexical_analysis
+            //MatchCollection mc = Regex.Matches("text", @"\bm\S*e\b");
+            
+            throw new NotImplementedException();
+            // ReadNext(expression, 0).Create()
 
             //calculated expression (double converted to string) or Errormessage starting with "ERROR" (+ optional Errormessage)
             string result = "0";
 
             return result;
+        }
+
+        public Expr ReadNext(string expression, int index)
+        {
+            throw new NotImplementedException();
         }
 
         public static IEnumerable<string> SplitInclude(IEnumerable<string> separators, string str)
