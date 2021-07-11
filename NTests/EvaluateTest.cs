@@ -53,7 +53,6 @@ namespace NTests
         [Test]
         [TestCase("abs ( - 1)* 2.3e-4", 7)]
         [TestCase("abs ( -- 1&6        ) * 2e423", 10)]
-        [TestCase("cos cosh cos h", 10)]
         public void Eval_ScanTest_Smoke(string equation, int tokenCount)
         {
             var tokens = ev.Scan(equation);
@@ -65,6 +64,7 @@ namespace NTests
         [Test]
         [TestCase("abs ( -- 1&6   %     ) * 2e423")]
         [TestCase("a bs ( -- 1&6        ) * 2e423")]
+        [TestCase("cos cosh cos h")]
         public void Eval_ScanTest_Fail(string equation)
         {
             Action act = () => ev.Scan(equation).ToArray();

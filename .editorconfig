@@ -29,6 +29,7 @@ resharper_max_initializer_elements_on_line = 5
 resharper_max_invocation_arguments_on_line = 10
 resharper_method_or_operator_body = expression_body
 resharper_place_accessorholder_attribute_on_same_line = false
+resharper_place_constructor_initializer_on_same_line = true
 resharper_place_field_attribute_on_same_line = false
 resharper_place_simple_embedded_statement_on_same_line = false
 resharper_show_autodetect_configure_formatting_tip = false
