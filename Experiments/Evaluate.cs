@@ -1,38 +1,85 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
-
-using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 
+// https://www.codewars.com/kata/564d9ebde30917684f000048/train/csharp
 namespace Experiments
 {
-    // https://www.codewars.com/kata/564d9ebde30917684f000048/train/csharp
+    public enum TokenType
+    {
+        Space,
+        LeftParen,
+        RightParen,
+        Func,
+        Mult,
+        Div,
+        Pow,
+        Minus,
+        Plus,
+        Num,
+    }
+
+    public class Token
+    {
+        public Token(TokenType type, string value, int index)
+        {
+            (Type, Value, Index) = (type, value, index);
+        }
+        public TokenType Type { get; }
+        public string Value { get; }
+        public int Index { get; }
+        public int Lenght => Value.Length;
+    }
     public class Evaluate
     {
-        // Enum of tokens
-        
-        // delegate double Function(params double[] args);
-        //
-        // private static Dictionary<string, Function> Operations = new()
-        // {
-        //     { "sin", args => Math.Sin(args[0]) },
-        //     { "tan", x => Math.Tan(x[0]) },
-        //     { "exp", x => Math.Exp(x[0]) },
-        //     { "-", x => -x[0] },
-        // };
-        //
-        // private static Dictionary<string, Func<double[], double>> Operations = new()
-        // {
-        //     { "sin", x => Math.Sin(x[0]) },
-        //     { "tan", x => Math.Tan(x[0]) },
-        //     { "exp", x => Math.Exp(x[0]) },
-        //     { "-", x => -x[0] },
-        // };
 
-        // Expressions are graph and I need sort it. Topological sorting
+        public List<(string regex, TokenType tokenType)> RegexpToToken = new()
+        {
+            (@"\d+(\.?\d+)?([eE]-?\d+)?", TokenType.Num),
+            ("[A-Za-z]+", TokenType.Func),
+            (@"\(", TokenType.LeftParen),
+            (@"\)", TokenType.RightParen),
+            ("-", TokenType.Minus),
+            (@"\+", TokenType.Plus),
+            (@"\*", TokenType.Mult),
+            ("/", TokenType.Div),
+            ("&", TokenType.Pow),
+            (@"\s+", TokenType.Space),
+        };
+
+        public IEnumerable<Token> Scan(string expr)
+        {
+            // https://docs.microsoft.com/en-us/dotnet/standard/base-types/regular-expression-options
+            //https://en.wikipedia.org/wiki/Lexical_grammar
+            // https://en.wikipedia.org/wiki/Lexical_analysis
+            //MatchCollection mc = Regex.Matches("text", @"\bm\S*e\b");
+
+            if (Regex.Matches(expr, @"(?<=[A-Za-z])\s+(?=[A-Za-z])").Any())
+            {
+                throw new InvalidOperationException(
+                    $"Not supported space symbol on index: {Regex.Matches(expr, @"(?<=[A-Za-z])\s+(?=[A-Za-z])").First().Index}");
+            }
+
+            return RegexpToToken
+                   .SelectMany(tpl => 
+                       Regex.Matches(expr, tpl.regex).Select(match => new Token(tpl.tokenType, match.Value, match.Index)))
+                   .OrderBy(token => token.Index)
+                   .ThenByDescending(token => token.Lenght)
+                   .RemoveInterceptedTokens()
+                   .Where(token => token.Type != TokenType.Space);
+        }
+
+        public string Eval(string expr)
+        { 
+            // NOTE: https://stackoverflow.com/questions/6219454/efficient-way-to-remove-all-whitespace-from-string
+
+            throw new NotImplementedException();
+        }
+
+        public Expr ReadNext(string expression, int index) => throw new NotImplementedException();
+
+
         public abstract class Expr
         {
             public int Index { get; set; }
@@ -59,15 +106,19 @@ namespace Experiments
 
         private class Brackets : NoneTerminalExpr
         {
+            // TODO: prefix and funcion
+
             public override double Eval() => Arg.Eval();
             public override Expr Create(IEnumerator<string> enumerator) => throw new NotImplementedException();
         }
 
         private class OneArgFunc : NoneTerminalExpr
         {
+            // Use as switch, we don't need to enumerate operations
             private static Dictionary<string, Func<double, double>> Operations = new()
             {
                 { "sin", x => Math.Sin(x) },
+                { "sinh", x => Math.Sinh(x) },
                 { "tan", x => Math.Tan(x) },
                 { "exp", x => Math.Exp(x) },
                 { "-", x => -x },
@@ -92,75 +143,92 @@ namespace Experiments
             public override double Eval() => Function(Arg.Eval(), Arg2.Eval());
             public override Expr Create(IEnumerator<string> enumerator) => throw new NotImplementedException();
         }
+    }
 
-        // public IEnumerable<string> ParseExpression(string expression)
-        // {
-        //     for (int start = 0, len = 1; start < expression.Length;)
-        //     {
-        //         var span = expression.AsSpan(start, len);
-        //         
-        //     }
-        // }
-
-        enum MyEnum
+    public static class Ext
+    {
+        public static int? Priority(this TokenType tokenType) => tokenType switch
         {
-            first,
-            second
-        }
+            TokenType.Pow => 3,
+            TokenType.Mult => 2,
+            TokenType.Div => 2,
+            TokenType.Minus => 1,
+            TokenType.Plus => 1,
+            _ => null,
+        };
         
-        public string Eval(string expression)
+        public static IEnumerable<Token> RemoveInterceptedTokens(this IEnumerable<Token> tokens)
         {
-            var chars = expression.ToList();
-            Regex.Matches(expression, "regext", )
-            expression.AsSpan().Slice(0, 3).GetHashCode()
-
-            //TODO: create parsing using regexp
-            // https://docs.microsoft.com/en-us/dotnet/standard/base-types/regular-expression-options
-            // difficult to use because there are such lexemes as "sin" and "sinh"
-            //https://en.wikipedia.org/wiki/Lexical_grammar
-            // https://en.wikipedia.org/wiki/Lexical_analysis
-            //MatchCollection mc = Regex.Matches("text", @"\bm\S*e\b");
-            
-            throw new NotImplementedException();
-            // ReadNext(expression, 0).Create()
-
-            //calculated expression (double converted to string) or Errormessage starting with "ERROR" (+ optional Errormessage)
-            string result = "0";
-
-            return result;
-        }
-
-        public Expr ReadNext(string expression, int index)
-        {
-            throw new NotImplementedException();
-        }
-
-        public static IEnumerable<string> SplitInclude(IEnumerable<string> separators, string str)
-        {
-            var divisionPoints = new SortedSet<int>(){str.Length};
-
-            foreach (var spr in separators.Append(" "))
+            Token prev = null;
+            foreach (var token in tokens)
             {
-                for (var i = 0; i + spr.Length < str.Length; i++)
-                {
-                    if (string.Compare(spr, 0, str, i, spr.Length) == 0)
-                    {
-                        divisionPoints.Add(i);
-                        divisionPoints.Add(i + spr.Length);
-                    }
-                }
-            }
+                var expectedIndex = prev?.Index + prev?.Lenght;
 
-            var previous = 0;
-            foreach (var divisionPoint in divisionPoints)
-            {
-                var substr = str.Substring(previous, divisionPoint - previous);
+                if (token.Index > expectedIndex)
+                    throw new InvalidOperationException(
+                        $"Can not recognize token between [{expectedIndex}] and [{token.Index}] indexes");
 
-                if (!string.IsNullOrWhiteSpace(substr))
-                    yield return substr;
+                if (token.Index < expectedIndex)
+                    continue;
 
-                previous = divisionPoint;
+                prev = token;
+                yield return token;
             }
         }
     }
+    
+    // public static IEnumerable<string> SplitInclude(IEnumerable<string> separators, string str)
+    // {
+    //     var divisionPoints = new SortedSet<int>
+    //     {
+    //         str.Length,
+    //     };
+    //
+    //     foreach (var spr in separators.Append(" "))
+    //     {
+    //         for (var i = 0; i + spr.Length < str.Length; i++)
+    //         {
+    //             if (string.Compare(spr, 0, str, i, spr.Length) == 0)
+    //             {
+    //                 divisionPoints.Add(i);
+    //                 divisionPoints.Add(i + spr.Length);
+    //             }
+    //         }
+    //     }
+    //
+    //     var previous = 0;
+    //
+    //     foreach (var divisionPoint in divisionPoints)
+    //     {
+    //         var substr = str.Substring(previous, divisionPoint - previous);
+    //
+    //         if (!string.IsNullOrWhiteSpace(substr))
+    //             yield return substr;
+    //
+    //         previous = divisionPoint;
+    //     }
+    // }
+    // Prblly create mapping string -> token
+
+    // Enum of tokens
+
+    // delegate double Function(params double[] args);
+    //
+    // private static Dictionary<string, Function> Operations = new()
+    // {
+    //     { "sin", args => Math.Sin(args[0]) },
+    //     { "tan", x => Math.Tan(x[0]) },
+    //     { "exp", x => Math.Exp(x[0]) },
+    //     { "-", x => -x[0] },
+    // };
+    //
+    // private static Dictionary<string, Func<double[], double>> Operations = new()
+    // {
+    //     { "sin", x => Math.Sin(x[0]) },
+    //     { "tan", x => Math.Tan(x[0]) },
+    //     { "exp", x => Math.Exp(x[0]) },
+    //     { "-", x => -x[0] },
+    // };
+
+    // Expressions are graph and I need sort it. Topological sorting
 }

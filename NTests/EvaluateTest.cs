@@ -5,6 +5,7 @@ using FluentAssertions;
 
 namespace NTests
 {
+    // Fluent assertion: https://fluentassertions.com/introduction
     [TestFixture]
     public class EvaluateTest
     {
@@ -47,19 +48,26 @@ namespace NTests
         }
 
         [Test]
-        [TestCase(new [] { ")", "[]", "var", }, "[] dfvf dfvardf))",
-            new [] { "[]", "dfvf", "df", "var", "df", ")", ")" })]  
-        [TestCase(new [] { ")", "[]", "vardf", }, "[] dfvf dfvardf))",
-            new [] { "[]", "dfvf", "df", "vardf", ")", ")" })]  
-        [TestCase(new [] { "12345", "3456789" }, "123456789",
-            new [] { "12", "345", "6789"})] 
-        [TestCase(new [] { "cos", "cosh", "+" }, "cosh+1223",
-            new [] { "cosh", "+", "1223"})]
-
-        public void SplitIncludeTest(string[] separators, string str, string[] ans)
+        public void Eval_ScanTest()
         {
-            Evaluate.SplitInclude(separators, str).Should()
-                    .BeEquivalentTo(ans, options => options.WithoutStrictOrdering());
+            var tokens = ev.Scan("abs ( - 1)* 2.3e-4");
+            tokens.Should().HaveCount(7);
         }
+
+        // [Test]
+        // [TestCase(new [] { ")", "[]", "var", }, "[] dfvf dfvardf))",
+        //     new [] { "[]", "dfvf", "df", "var", "df", ")", ")" })]  
+        // [TestCase(new [] { ")", "[]", "vardf", }, "[] dfvf dfvardf))",
+        //     new [] { "[]", "dfvf", "df", "vardf", ")", ")" })]  
+        // [TestCase(new [] { "12345", "3456789" }, "123456789",
+        //     new [] { "12", "345", "6789"})] 
+        // [TestCase(new [] { "cos", "cosh", "+" }, "cosh+1223",
+        //     new [] { "cosh", "+", "1223"})]
+        //
+        // public void SplitIncludeTest(string[] separators, string str, string[] ans)
+        // {
+        //     Evaluate.SplitInclude(separators, str).Should()
+        //             .BeEquivalentTo(ans, options => options.WithoutStrictOrdering());
+        // }
     }
 }
