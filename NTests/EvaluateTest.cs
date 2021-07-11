@@ -1,4 +1,7 @@
+using System;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Experiments;
 using NUnit.Framework;
 using FluentAssertions;
@@ -48,10 +51,37 @@ namespace NTests
         }
 
         [Test]
-        public void Eval_ScanTest()
+        [TestCase("abs ( - 1)* 2.3e-4", 7)]
+        [TestCase("abs ( -- 1&6        ) * 2e423", 10)]
+        [TestCase("cos cosh cos h", 10)]
+        public void Eval_ScanTest_Smoke(string equation, int tokenCount)
         {
-            var tokens = ev.Scan("abs ( - 1)* 2.3e-4");
-            tokens.Should().HaveCount(7);
+            var tokens = ev.Scan(equation);
+            Console.WriteLine(equation);
+            Console.WriteLine(string.Join("; ", tokens));
+            tokens.Should().HaveCount(tokenCount);
+        }
+
+        [Test]
+        [TestCase("abs ( -- 1&6   %     ) * 2e423")]
+        [TestCase("a bs ( -- 1&6        ) * 2e423")]
+        public void Eval_ScanTest_Fail(string equation)
+        {
+            Action act = () => ev.Scan(equation).ToArray();
+            act.Should().Throw<InvalidOperationException>();
+        }
+
+        [Test]
+        public void Regexp_test()
+        {
+            //language=regexp
+            string pattern = @"(?<duplicateWord>\w+)\s\k<duplicateWord>\W(?<nextWord>\w+)|(?<nsw>nsw)";
+            string input = "He said that that was the the correct answer.";
+            foreach (Match match in Regex.Matches(input, pattern, RegexOptions.IgnoreCase))
+                Console.WriteLine("A duplicate '{0}' at position {1} is followed by '{2}'.",
+                    match.Groups["duplicateWord"].Value, 
+                    match.Groups["duplicateWord"].Index,
+                    match.Groups["nextWord"].Value);
         }
 
         // [Test]

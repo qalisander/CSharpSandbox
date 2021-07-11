@@ -4,11 +4,11 @@ using System.Linq;
 using System.Text.RegularExpressions;
 
 // https://www.codewars.com/kata/564d9ebde30917684f000048/train/csharp
+// Lexer examples https://github.com/mauriciomoccelin/compiler
 namespace Experiments
 {
     public enum TokenType
     {
-        Space,
         LeftParen,
         RightParen,
         Func,
@@ -18,6 +18,7 @@ namespace Experiments
         Minus,
         Plus,
         Num,
+        None,
     }
 
     public class Token
@@ -30,22 +31,22 @@ namespace Experiments
         public string Value { get; }
         public int Index { get; }
         public int Lenght => Value.Length;
+        public override string ToString() => $"<{Type} '{Value}'>";
     }
     public class Evaluate
     {
-
-        public List<(string regex, TokenType tokenType)> RegexpToToken = new()
+        public List<(string regexp, TokenType tokenType)> RegexpToToken = new()
         {
-            (@"\d+(\.?\d+)?([eE]-?\d+)?", TokenType.Num),
-            ("[A-Za-z]+", TokenType.Func),
-            (@"\(", TokenType.LeftParen),
-            (@"\)", TokenType.RightParen),
-            ("-", TokenType.Minus),
-            (@"\+", TokenType.Plus),
-            (@"\*", TokenType.Mult),
-            ("/", TokenType.Div),
-            ("&", TokenType.Pow),
-            (@"\s+", TokenType.Space),
+            ( /*language=regexp*/ @"\d+(\.?\d+)?([eE]-?\d+)?", TokenType.Num),
+            ( /*language=regexp*/ "[A-Za-z]+", TokenType.Func),
+            ( /*language=regexp*/ @"\(", TokenType.LeftParen),
+            ( /*language=regexp*/ @"\)", TokenType.RightParen),
+            ( /*language=regexp*/ "-", TokenType.Minus),
+            ( /*language=regexp*/ @"\+", TokenType.Plus),
+            ( /*language=regexp*/ @"\*", TokenType.Mult),
+            ( /*language=regexp*/ "/", TokenType.Div),
+            ( /*language=regexp*/ "&", TokenType.Pow),
+            ( /*language=regexp*/ @"\s+", TokenType.None),
         };
 
         public IEnumerable<Token> Scan(string expr)
@@ -55,6 +56,8 @@ namespace Experiments
             // https://en.wikipedia.org/wiki/Lexical_analysis
             //MatchCollection mc = Regex.Matches("text", @"\bm\S*e\b");
 
+            // NOTE: https://stackoverflow.com/questions/6219454/efficient-way-to-remove-all-whitespace-from-string
+            // TODO: prlly remove, there is not need in this check with function validation
             if (Regex.Matches(expr, @"(?<=[A-Za-z])\s+(?=[A-Za-z])").Any())
             {
                 throw new InvalidOperationException(
@@ -63,22 +66,64 @@ namespace Experiments
 
             return RegexpToToken
                    .SelectMany(tpl => 
-                       Regex.Matches(expr, tpl.regex).Select(match => new Token(tpl.tokenType, match.Value, match.Index)))
+                       Regex.Matches(expr, tpl.regexp).Select(match => new Token(tpl.tokenType, match.Value, match.Index)))
                    .OrderBy(token => token.Index)
                    .ThenByDescending(token => token.Lenght)
-                   .RemoveInterceptedTokens()
-                   .Where(token => token.Type != TokenType.Space);
+                   .RemoveIntercepted()
+                   .Where(token => token.Type != TokenType.None);
         }
 
         public string Eval(string expr)
-        { 
-            // NOTE: https://stackoverflow.com/questions/6219454/efficient-way-to-remove-all-whitespace-from-string
+        {
+            var tokens = Scan(expr);
 
-            throw new NotImplementedException();
+            var enumerator = tokens.GetEnumerator();
+            if (enumerator.MoveNext())
+            {
+                return EvalRec(enumerator).Eval().ToString();
+            }
+
+            throw new InvalidOperationException("Empty equation");
+            
+            static Expr EvalRec(IEnumerator<Token> enumerator)
+            {
+                var current = enumerator.Current;
+
+                switch (current.Type)
+                {
+                    case TokenType.Num:
+                        if (!enumerator.MoveNext())
+                            throw NotImplementedException("Create num");
+                        
+                        switch (enumerator.Current.Type)
+                        {
+                            case TokenType.Div:
+                                break;
+                            case TokenType.Pow:
+                                break;
+                            case TokenType.Minus:
+                                break;
+                            case TokenType.Plus:
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
+                        break; 
+                    case TokenType.LeftParen:
+                        break;
+                    case TokenType.RightParen:
+                        break;
+                    case TokenType.Func:
+                        break;
+                    case TokenType.Mult:
+                        break;
+                    case TokenType.None:
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
         }
-
-        public Expr ReadNext(string expression, int index) => throw new NotImplementedException();
-
 
         public abstract class Expr
         {
@@ -157,7 +202,8 @@ namespace Experiments
             _ => null,
         };
         
-        public static IEnumerable<Token> RemoveInterceptedTokens(this IEnumerable<Token> tokens)
+        // TODO: rename to FilterAndValidate, check function existence
+        public static IEnumerable<Token> RemoveIntercepted(this IEnumerable<Token> tokens)
         {
             Token prev = null;
             foreach (var token in tokens)
