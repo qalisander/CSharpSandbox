@@ -1,4 +1,5 @@
-﻿using System;
+﻿#define MYTEST
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -36,7 +37,6 @@ namespace Experiments
         public int Lenght => Value.Length;
         public override string ToString() => $"<{Type} id[{Index}] '{Value}'>";
         public bool IsOperation() => Type >= TokenType.Plus;
-        public bool HasLowerPriorityThen(Token token) => (int) Type / 10 < (int) token.Type / 10;
         public bool HasHigherPriorityThen(Token prevToken) =>
             Type == TokenType.Pow
             || prevToken is null
@@ -72,10 +72,18 @@ namespace Experiments
 
         public string Eval(string expr)
         {
-            var tokens = Scan(expr);
-
-            return EvalRec(tokens.GetEnumerator())?.Eval().ToString()
-                   ?? throw new InvalidOperationException("Empty equation");
+            try
+            {
+                return EvalRec(Scan(expr).GetEnumerator())?.Eval().ToString()
+                       ?? throw new InvalidOperationException("Empty equation");
+            }
+            catch (Exception)
+            {
+#if DEBUG && MYTEST
+                throw;
+#endif
+                return "ERROR";
+            }
 
             static Expr EvalRec(
                 IEnumerator<Token> enumerator,
@@ -103,10 +111,10 @@ namespace Experiments
                             : "";
 
                         if (!enumerator.MoveNext())
-                            throw new InvalidOperationException($"Invalid ending on: {token}");
+                            throw new InvalidTokenException(token);
 
                         if (enumerator.Current.Type != TokenType.LeftParen)
-                            throw new InvalidOperationException($"Invalid function syntax: {enumerator.Current}");
+                            throw new InvalidTokenException(enumerator.Current);
 
                         var grouping = new Grouping(EvalRec(enumerator), func);
 
@@ -114,7 +122,7 @@ namespace Experiments
                     case TokenType.RightParen:
                         return prevExpr;
                     default:
-                        throw new ArgumentOutOfRangeException();
+                        throw new InvalidTokenException(token);
                 }
 
                 Expr CreateOp(Expr? ex)
@@ -125,7 +133,7 @@ namespace Experiments
 
                     // TODO: use typed tokens, with Current as Operation
                     if (!enumerator.Current.IsOperation())
-                        throw new InvalidOperationException($"Invalid token: {enumerator.Current}");
+                        throw new InvalidTokenException(enumerator.Current);
 
                     var operation = enumerator.Current;
 
@@ -255,25 +263,26 @@ namespace Experiments
                 var expectedIndex = prev?.Index + prev?.Lenght;
 
                 if (token.Index > expectedIndex)
-                {
-                    throw new InvalidOperationException(
-                        $"Invalid token: {token}");
-                }
+                    throw new InvalidTokenException(token);
 
                 if (token.Index < expectedIndex)
                     continue;
 
                 if (token.Type == TokenType.Func && !Grouping.IsFuncExist(token.Value))
-                {
-                    throw new InvalidOperationException(
-                        $"Invalid function: {token}");
-                }
+                    throw new InvalidTokenException(token);
 
                 prev = token;
 
                 yield return token;
             }
         }
+    }
+
+    public class InvalidTokenException : Exception
+    {
+        public InvalidTokenException(Token token) : base($"Invalid token: {token}") { }
+        
+        //TODO: Invalid string between tokens exception, token has context of string
     }
 
     // public static IEnumerable<string> SplitInclude(IEnumerable<string> separators, string str)
