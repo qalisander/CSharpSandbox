@@ -10,16 +10,16 @@ namespace Experiments
 {
     public enum TokenType
     {
+        None,
         LeftParen,
         RightParen,
-        Func,
-        Mult,
-        Div,
-        Pow,
-        Minus,
-        Plus,
         Num,
-        None,
+        Func,
+        Plus = 10, //NOTE: first digit - priority
+        Minus,
+        Mult = 20,
+        Div,
+        Pow = 30,
     }
 
     public class Token
@@ -32,7 +32,9 @@ namespace Experiments
         public string Value { get; }
         public int Index { get; }
         public int Lenght => Value.Length;
-        public override string ToString() => $"<{Type} '{Value}'>";
+        public override string ToString() => $"<{Type} id[{Index}] '{Value}'>";
+        public bool IsOperation() => Type >= TokenType.Plus;
+        public bool HasLowerPriorityThen(Token token) => (int) Type / 10 < (int) token.Type / 10;
     }
     public class Evaluate
     {
@@ -66,36 +68,41 @@ namespace Experiments
         public string Eval(string expr)
         {
             var tokens = Scan(expr);
-
             var enumerator = tokens.GetEnumerator();
 
-            if (enumerator.MoveNext())
-                return EvalRec(enumerator).Eval().ToString();
-
-            throw new InvalidOperationException("Empty equation");
+            return enumerator.MoveNext()
+                ? EvalRec(enumerator).Eval().ToString()
+                : throw new InvalidOperationException("Empty equation");
 
             static Expr EvalRec(IEnumerator<Token> enumerator)
             {
-                var current = enumerator.Current;
+                var token = enumerator.Current;
 
-                switch (current.Type)
+                switch (token.Type)
                 {
                     case TokenType.Num:
+                        var number = new Number(enumerator.Current.Value);
                         if (!enumerator.MoveNext())
-                            throw new NotImplementedException("Create num");
+                            return number;
+
+                        var operation = enumerator.Current.IsOperation()
+                            ? enumerator.Current
+                            : throw new InvalidOperationException($"Operation expected at: {enumerator.Current}");
+                        
+                        if (!enumerator.MoveNext())
+                            throw new InvalidOperationException($"Invalid ending: {enumerator.Current}");
 
                         switch (enumerator.Current.Type)
                         {
-                            case TokenType.Div:
-                                break;
-                            case TokenType.Pow:
-                                break;
-                            case TokenType.Minus:
-                                break;
-                            case TokenType.Plus:
+                            case TokenType.Num:
+                                var number2 = new Number(enumerator.Current.Value);
+                                return new Binary(number, operation.Value, number2);
+                            case TokenType.Func:
+                            case TokenType.LeftParen:
+                                EvalRec(enumerator);
                                 break;
                             default:
-                                throw new ArgumentOutOfRangeException();
+                                throw new InvalidOperationException($"Invalid token: {enumerator.Current}");
                         }
 
                         break;
@@ -112,8 +119,6 @@ namespace Experiments
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
-
-                throw new NotImplementedException();
             }
         }
     }
@@ -215,16 +220,6 @@ namespace Experiments
 
     public static class Ext
     {
-        public static int? Priority(this TokenType tokenType) => tokenType switch
-        {
-            TokenType.Pow => 3,
-            TokenType.Mult => 2,
-            TokenType.Div => 2,
-            TokenType.Minus => 1,
-            TokenType.Plus => 1,
-            _ => null,
-        };
-
         public static IEnumerable<Token> FilterAndValidate(this IEnumerable<Token> tokens)
         {
             Token prev = null;
@@ -236,7 +231,7 @@ namespace Experiments
                 if (token.Index > expectedIndex)
                 {
                     throw new InvalidOperationException(
-                        $"Can not recognize token between [{expectedIndex}] and [{token.Index}] indexes");
+                        $"Invalid token: {token}");
                 }
 
                 if (token.Index < expectedIndex)
@@ -245,7 +240,7 @@ namespace Experiments
                 if (token.Type == TokenType.Func && !Grouping.IsFuncExist(token.Value))
                 {
                     throw new InvalidOperationException(
-                        $"Function at index: [{token.Index}] doesn't exist");
+                        $"Invalid function: {token}");
                 }
 
                 prev = token;
