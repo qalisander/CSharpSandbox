@@ -26,7 +26,10 @@ namespace Experiments
 
     public class Token
     {
-        public Token(TokenType type, string value, int index) => (Type, Value, Index) = (type, value, index);
+        public Token(TokenType type, string value, int index)
+        {
+            (Type, Value, Index) = (type, value, index);
+        }
         public TokenType Type { get; }
         public string Value { get; }
         public int Index { get; }
@@ -34,8 +37,10 @@ namespace Experiments
         public override string ToString() => $"<{Type} id[{Index}] '{Value}'>";
         public bool IsOperation() => Type >= TokenType.Plus;
         public bool HasLowerPriorityThen(Token token) => (int) Type / 10 < (int) token.Type / 10;
-        public bool HasHigherPriorityThen(Token prevToken) => 
-            Type == TokenType.Pow || (int) Type / 10 > (int) prevToken.Type / 10;
+        public bool HasHigherPriorityThen(Token prevToken) =>
+            Type == TokenType.Pow
+            || prevToken is null
+            || (int) Type / 10 > (int) prevToken.Type / 10;
     }
     public class Evaluate
     {
@@ -73,42 +78,23 @@ namespace Experiments
                    ?? throw new InvalidOperationException("Empty equation");
 
             static Expr EvalRec(
-                IEnumerator<Token> enumerator, 
+                IEnumerator<Token> enumerator,
                 Expr prevExpr = null,
                 Token prevOp = null) //add previous unaccomplished operation
             {
                 if (!enumerator.MoveNext())
                     return prevExpr;
 
-                var token = enumerator.Current; // TODO: make like function or set like variable better throw experience (100 line)
+                // TODO: make like function or set like variable better throw experience (100 line)
+                var token = enumerator.Current;
 
                 switch (token.Type)
                 {
                     case TokenType.Num:
                         var number = new Number(token.Value);
-                        
-                        if (!enumerator.MoveNext() || enumerator.Current.Type == TokenType.LeftParen)
-                            return number;
 
-                        // TODO: use typed tokens, with Current as Operation
-                        if (!enumerator.Current.IsOperation())
-                            throw new InvalidOperationException($"Invalid token: {enumerator.Current}");
-
-                        if (enumerator.Current.HasHigherPriorityThen(prevOp))
-                        {
-                            var expr = EvalRec(enumerator, number, enumerator.Current);
-
-                            return new Binary(number, enumerator.Current.Type, expr);
-                        }
-                        else
-                        {
-                            var expr = new Binary(prevExpr, prevOp.Type, number);
-                            
-                            var nextExpr = EvalRec(enumerator, expr, enumerator.Current);
-
-                            return new Binary(expr, enumerator.Current.Type, nextExpr);
-                        }
-                    case TokenType.Minus when prevExpr is null: // TODO: prlly coalesce with functions
+                        return CreateOp(number);
+                    case TokenType.Minus: // TODO: prlly coalesce with functions
                         return new Unary(EvalRec(enumerator), TokenType.Minus);
                     case TokenType.Func:
                     case TokenType.LeftParen:
@@ -122,11 +108,41 @@ namespace Experiments
                         if (enumerator.Current.Type != TokenType.LeftParen)
                             throw new InvalidOperationException($"Invalid function syntax: {enumerator.Current}");
 
-                        return EvalRec(enumerator, new Grouping(EvalRec(enumerator), func), prevOp);
+                        var grouping = new Grouping(EvalRec(enumerator), func);
+
+                        return CreateOp(grouping);
                     case TokenType.RightParen:
                         return prevExpr;
                     default:
                         throw new ArgumentOutOfRangeException();
+                }
+
+                Expr CreateOp(Expr? ex)
+                {
+
+                    if (!enumerator.MoveNext() || enumerator.Current.Type == TokenType.LeftParen)
+                        return ex;
+
+                    // TODO: use typed tokens, with Current as Operation
+                    if (!enumerator.Current.IsOperation())
+                        throw new InvalidOperationException($"Invalid token: {enumerator.Current}");
+
+                    var operation = enumerator.Current;
+
+                    if (operation.HasHigherPriorityThen(prevOp))
+                    {
+                        var expr = EvalRec(enumerator, ex, enumerator.Current);
+
+                        return new Binary(ex, operation.Type, expr);
+                    }
+                    else
+                    {
+                        var expr = new Binary(prevExpr, prevOp.Type, ex);
+
+                        var nextExpr = EvalRec(enumerator, expr, enumerator.Current);
+
+                        return new Binary(expr, operation.Type, nextExpr);
+                    }
                 }
             }
         }
@@ -180,8 +196,8 @@ namespace Experiments
 
         public Grouping(Expr arg, string func = default) : base(arg)
         {
-            Function = string.IsNullOrEmpty(func) 
-                ? x => x 
+            Function = string.IsNullOrEmpty(func)
+                ? x => x
                 : Funcs[func];
         }
         private Func<double, double> Function { get; }
