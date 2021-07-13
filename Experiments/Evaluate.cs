@@ -42,6 +42,7 @@ namespace Experiments
             || prevToken is null
             || (int) Type / 10 > (int) prevToken.Type / 10;
     }
+
     public class Evaluate
     {
         public readonly List<(string regexp, TokenType tokenType)> RegexpToToken = new()
@@ -106,12 +107,11 @@ namespace Experiments
                         return new Unary(EvalRec(enumerator), TokenType.Minus);
                     case TokenType.Func:
                     case TokenType.LeftParen:
-                        string func = enumerator.Current.Type == TokenType.Func
-                            ? enumerator.Current.Value
-                            : "";
-
-                        if (!enumerator.MoveNext())
-                            throw new InvalidTokenException(token);
+                        string func = token.Type == TokenType.Func
+                            ? enumerator.MoveNext()
+                                ? token.Value
+                                : throw new InvalidTokenException(token)
+                            : ""; // TODO: add minus, prlly use switch
 
                         if (enumerator.Current.Type != TokenType.LeftParen)
                             throw new InvalidTokenException(enumerator.Current);
@@ -127,8 +127,7 @@ namespace Experiments
 
                 Expr CreateOp(Expr? ex)
                 {
-
-                    if (!enumerator.MoveNext() || enumerator.Current.Type == TokenType.LeftParen)
+                    if (!enumerator.MoveNext() || enumerator.Current.Type == TokenType.RightParen)
                         return ex;
 
                     // TODO: use typed tokens, with Current as Operation
@@ -139,9 +138,9 @@ namespace Experiments
 
                     if (operation.HasHigherPriorityThen(prevOp))
                     {
-                        var expr = EvalRec(enumerator, ex, enumerator.Current);
+                        var nextExpr = EvalRec(enumerator, ex, enumerator.Current);
 
-                        return new Binary(ex, operation.Type, expr);
+                        return new Binary(ex, operation.Type, nextExpr);
                     }
                     else
                     {
@@ -261,7 +260,7 @@ namespace Experiments
             foreach (var token in tokens)
             {
                 var expectedIndex = prev?.Index + prev?.Lenght;
-
+                
                 if (token.Index > expectedIndex)
                     throw new InvalidTokenException(token);
 
@@ -271,9 +270,7 @@ namespace Experiments
                 if (token.Type == TokenType.Func && !Grouping.IsFuncExist(token.Value))
                     throw new InvalidTokenException(token);
 
-                prev = token;
-
-                yield return token;
+                yield return prev = token;
             }
         }
     }
@@ -284,36 +281,4 @@ namespace Experiments
         
         //TODO: Invalid string between tokens exception, token has context of string
     }
-
-    // public static IEnumerable<string> SplitInclude(IEnumerable<string> separators, string str)
-    // {
-    //     var divisionPoints = new SortedSet<int>
-    //     {
-    //         str.Length,
-    //     };
-    //
-    //     foreach (var spr in separators.Append(" "))
-    //     {
-    //         for (var i = 0; i + spr.Length < str.Length; i++)
-    //         {
-    //             if (string.Compare(spr, 0, str, i, spr.Length) == 0)
-    //             {
-    //                 divisionPoints.Add(i);
-    //                 divisionPoints.Add(i + spr.Length);
-    //             }
-    //         }
-    //     }
-    //
-    //     var previous = 0;
-    //
-    //     foreach (var divisionPoint in divisionPoints)
-    //     {
-    //         var substr = str.Substring(previous, divisionPoint - previous);
-    //
-    //         if (!string.IsNullOrWhiteSpace(substr))
-    //             yield return substr;
-    //
-    //         previous = divisionPoint;
-    //     }
-    // }
 }

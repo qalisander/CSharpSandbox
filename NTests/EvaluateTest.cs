@@ -19,6 +19,12 @@ namespace NTests
         {
             Assert.AreEqual("18", ev.Eval("2*3&2"));
         }
+        
+        [Test]
+        public void Eval_Test1_Parenthesis()
+        {
+            Assert.AreEqual("18", ev.Eval("(2*3&2)"));
+        }
 
         [Test]
         public void Eval_Test2()
@@ -83,21 +89,5 @@ namespace NTests
                     match.Groups["duplicateWord"].Index,
                     match.Groups["nextWord"].Value);
         }
-
-        // [Test]
-        // [TestCase(new [] { ")", "[]", "var", }, "[] dfvf dfvardf))",
-        //     new [] { "[]", "dfvf", "df", "var", "df", ")", ")" })]  
-        // [TestCase(new [] { ")", "[]", "vardf", }, "[] dfvf dfvardf))",
-        //     new [] { "[]", "dfvf", "df", "vardf", ")", ")" })]  
-        // [TestCase(new [] { "12345", "3456789" }, "123456789",
-        //     new [] { "12", "345", "6789"})] 
-        // [TestCase(new [] { "cos", "cosh", "+" }, "cosh+1223",
-        //     new [] { "cosh", "+", "1223"})]
-        //
-        // public void SplitIncludeTest(string[] separators, string str, string[] ans)
-        // {
-        //     Evaluate.SplitInclude(separators, str).Should()
-        //             .BeEquivalentTo(ans, options => options.WithoutStrictOrdering());
-        // }
     }
 }
