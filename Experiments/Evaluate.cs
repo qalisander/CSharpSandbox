@@ -8,6 +8,8 @@ using System.Text.RegularExpressions;
 // Lexer examples https://github.com/mauriciomoccelin/compiler
 namespace Experiments
 {
+    // TODO: create different token hierarchies: op, func, paren, num, space
+    // TODO: print console messages with underlining 
     public enum TokenType
     {
         None,
@@ -24,10 +26,7 @@ namespace Experiments
 
     public class Token
     {
-        public Token(TokenType type, string value, int index)
-        {
-            (Type, Value, Index) = (type, value, index);
-        }
+        public Token(TokenType type, string value, int index) => (Type, Value, Index) = (type, value, index);
         public TokenType Type { get; }
         public string Value { get; }
         public int Index { get; }
@@ -35,12 +34,14 @@ namespace Experiments
         public override string ToString() => $"<{Type} id[{Index}] '{Value}'>";
         public bool IsOperation() => Type >= TokenType.Plus;
         public bool HasLowerPriorityThen(Token token) => (int) Type / 10 < (int) token.Type / 10;
+        public bool HasHigherPriorityThen(Token prevToken) => 
+            Type == TokenType.Pow || (int) Type / 10 > (int) prevToken.Type / 10;
     }
     public class Evaluate
     {
         public readonly List<(string regexp, TokenType tokenType)> RegexpToToken = new()
         {
-            ( /*language=regexp*/ @"\d+(\.?\d+)?([eE]-?\d+)?", TokenType.Num),
+            ( /*language=regexp*/ @"\d+(\.?\d+)?([eE]-?\d+)?", TokenType.Num), // TODO: use factory methods
             ( /*language=regexp*/ "[A-Za-z]+", TokenType.Func),
             ( /*language=regexp*/ @"\(", TokenType.LeftParen),
             ( /*language=regexp*/ @"\)", TokenType.RightParen),
@@ -57,9 +58,8 @@ namespace Experiments
         // https://en.wikipedia.org/wiki/Lexical_analysis
         public IEnumerable<Token> Scan(string expr) =>
             RegexpToToken
-                .SelectMany(tpl =>
-                    Regex.Matches(expr, tpl.regexp)
-                         .Select(match => new Token(tpl.tokenType, match.Value, match.Index)))
+                .SelectMany(tpl => Regex.Matches(expr, tpl.regexp)
+                                        .Select(match => new Token(tpl.tokenType, match.Value, match.Index)))
                 .OrderBy(token => token.Index)
                 .ThenByDescending(token => token.Lenght)
                 .FilterAndValidate()
@@ -68,54 +68,63 @@ namespace Experiments
         public string Eval(string expr)
         {
             var tokens = Scan(expr);
-            var enumerator = tokens.GetEnumerator();
 
-            return enumerator.MoveNext()
-                ? EvalRec(enumerator).Eval().ToString()
-                : throw new InvalidOperationException("Empty equation");
+            return EvalRec(tokens.GetEnumerator())?.Eval().ToString()
+                   ?? throw new InvalidOperationException("Empty equation");
 
-            static Expr EvalRec(IEnumerator<Token> enumerator)
+            static Expr EvalRec(
+                IEnumerator<Token> enumerator, 
+                Expr prevExpr = null,
+                Token prevOp = null) //add previous unaccomplished operation
             {
-                var token = enumerator.Current;
+                if (!enumerator.MoveNext())
+                    return prevExpr;
+
+                var token = enumerator.Current; // TODO: make like function or set like variable better throw experience (100 line)
 
                 switch (token.Type)
                 {
                     case TokenType.Num:
-                        var number = new Number(enumerator.Current.Value);
-                        if (!enumerator.MoveNext())
+                        var number = new Number(token.Value);
+                        
+                        if (!enumerator.MoveNext() || enumerator.Current.Type == TokenType.LeftParen)
                             return number;
 
-                        var operation = enumerator.Current.IsOperation()
-                            ? enumerator.Current
-                            : throw new InvalidOperationException($"Operation expected at: {enumerator.Current}");
-                        
-                        if (!enumerator.MoveNext())
-                            throw new InvalidOperationException($"Invalid ending: {enumerator.Current}");
+                        // TODO: use typed tokens, with Current as Operation
+                        if (!enumerator.Current.IsOperation())
+                            throw new InvalidOperationException($"Invalid token: {enumerator.Current}");
 
-                        switch (enumerator.Current.Type)
+                        if (enumerator.Current.HasHigherPriorityThen(prevOp))
                         {
-                            case TokenType.Num:
-                                var number2 = new Number(enumerator.Current.Value);
-                                return new Binary(number, operation.Value, number2);
-                            case TokenType.Func:
-                            case TokenType.LeftParen:
-                                EvalRec(enumerator);
-                                break;
-                            default:
-                                throw new InvalidOperationException($"Invalid token: {enumerator.Current}");
-                        }
+                            var expr = EvalRec(enumerator, number, enumerator.Current);
 
-                        break;
-                    case TokenType.LeftParen:
-                        break;
-                    case TokenType.RightParen:
-                        break;
+                            return new Binary(number, enumerator.Current.Type, expr);
+                        }
+                        else
+                        {
+                            var expr = new Binary(prevExpr, prevOp.Type, number);
+                            
+                            var nextExpr = EvalRec(enumerator, expr, enumerator.Current);
+
+                            return new Binary(expr, enumerator.Current.Type, nextExpr);
+                        }
+                    case TokenType.Minus when prevExpr is null: // TODO: prlly coalesce with functions
+                        return new Unary(EvalRec(enumerator), TokenType.Minus);
                     case TokenType.Func:
-                        break;
-                    case TokenType.Mult:
-                        break;
-                    case TokenType.None:
-                        break;
+                    case TokenType.LeftParen:
+                        string func = enumerator.Current.Type == TokenType.Func
+                            ? enumerator.Current.Value
+                            : "";
+
+                        if (!enumerator.MoveNext())
+                            throw new InvalidOperationException($"Invalid ending on: {token}");
+
+                        if (enumerator.Current.Type != TokenType.LeftParen)
+                            throw new InvalidOperationException($"Invalid function syntax: {enumerator.Current}");
+
+                        return EvalRec(enumerator, new Grouping(EvalRec(enumerator), func), prevOp);
+                    case TokenType.RightParen:
+                        return prevExpr;
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
@@ -167,54 +176,55 @@ namespace Experiments
             { "log", Math.Log10 },
             { "sqrt", Math.Sqrt },
             { "abs", Math.Abs },
-            { "", x => x },
         };
 
-        public Grouping(Expr arg, string func = "") : base(arg)
+        public Grouping(Expr arg, string func = default) : base(arg)
         {
-            Function = Funcs[func];
+            Function = string.IsNullOrEmpty(func) 
+                ? x => x 
+                : Funcs[func];
         }
-        public Func<double, double> Function { get; }
+        private Func<double, double> Function { get; }
 
         public override double Eval() => Function(Arg.Eval());
 
         public static bool IsFuncExist(string func) => Funcs.ContainsKey(func);
     }
 
+    // TODO: merge unary and grouping
     public class Unary : NTExpr
     {
-        private static readonly Dictionary<string, Func<double, double>> UnaryOps = new()
+        public Unary(Expr arg, TokenType opToken) : base(arg)
         {
-            { "-", x => -x },
-        };
-
-        public Unary(Expr arg, string op) : base(arg)
-        {
-            Function = UnaryOps[op];
+            Function = opToken == TokenType.Minus
+                ? x => -x
+                : throw new NotSupportedException();
         }
 
-        public Func<double, double> Function { get; set; }
+        private Func<double, double> Function { get; }
         public override double Eval() => Function(Arg.Eval());
     }
 
     public class Binary : NTExpr
     {
-        private static readonly Dictionary<string, Func<double, double, double>> BinaryOps = new()
+        private static readonly Dictionary<TokenType, Func<double, double, double>> BinaryOps = new()
         {
-            { "+", (x, y) => x + y },
-            { "*", (x, y) => x * y },
-            { "&", Math.Pow },
-            { "-", (x, y) => x - y },
+            { TokenType.Plus, (x, y) => x + y },
+            { TokenType.Minus, (x, y) => x - y },
+            { TokenType.Mult, (x, y) => x * y },
+            { TokenType.Div, (x, y) => x / y },
+            { TokenType.Pow, Math.Pow },
         };
 
-        public Binary(Expr arg, string op, Expr arg2) : base(arg)
+        public Binary(Expr arg, TokenType opToken, Expr arg2) : base(arg)
         {
-            Function = BinaryOps[op];
+            Function = BinaryOps[opToken];
             Arg2 = arg2;
         }
 
-        public Expr Arg2 { get; set; }
-        public Func<double, double, double> Function { get; set; }
+        private Expr Arg2 { get; }
+
+        private Func<double, double, double> Function { get; }
         public override double Eval() => Function(Arg.Eval(), Arg2.Eval());
     }
 
