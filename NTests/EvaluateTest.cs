@@ -16,19 +16,28 @@ namespace NTests
         [Test]
         public void Eval_Test1()
         {
-            Assert.AreEqual("18", ev.Eval("2*3&2", true));
+            var expr = "2*3&2";
+            
+            ev.Print(expr);
+            Assert.AreEqual("18", ev.Eval(expr));
         }
         
         [Test]
         public void Eval_Test1_Parenthesis()
         {
-            Assert.AreEqual("18", ev.Eval("(2*3&2)", true));
+            var expr = "(2*3&2)";
+            
+            ev.Print(expr);
+            Assert.AreEqual("18", ev.Eval(expr));
         }
         
         [Test]
         public void Eval_Test1_Minus()
         {
-            Assert.AreEqual("-17", ev.Eval("-2*3&2 + 1", true));
+            var expr = "-2*3&2 + 1";
+            
+            ev.Print(expr);
+            Assert.AreEqual("-17", ev.Eval(expr));
         }
 
         [Test]

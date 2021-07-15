@@ -118,18 +118,17 @@ namespace Experiments
                 .FilterAndValidate() // TODO: string expr pass as arg here
                 .Where(token => token.Type != TokenType.None);
 
-        public string Eval(string expr, bool print = false)
+        public void Print(string expr)
+        {
+            Console.WriteLine(EvalRec(Scan(expr).GetEnumerator()));
+        }
+        
+        public string Eval(string expr)
         {
             try
             {
-                
-                var ans = EvalRec(Scan(expr).GetEnumerator())?.Eval().ToString()
+                return EvalRec(Scan(expr).GetEnumerator())?.Eval().ToString()
                        ?? throw new InvalidOperationException("Empty equation");
-
-                if (print)
-                    Console.WriteLine(EvalRec(Scan(expr).GetEnumerator()));
-
-                return ans;
             }
             catch (Exception)
             {
@@ -138,64 +137,64 @@ namespace Experiments
 #endif
                 return "ERROR";
             }
+        }
 
-            static Expr EvalRec(
-                IEnumerator<Token> enumerator,
-                Expr prevExpr = null,
-                Token prevOp = null) //add previous unaccomplished operation
+        private Expr EvalRec(
+            IEnumerator<Token> enumerator,
+            Expr prevExpr = null,
+            Token prevOp = null) //add previous unaccomplished operation
+        {
+            if (!enumerator.MoveNext())
+                return prevExpr;
+
+            var token = enumerator.Current;
+
+            switch (token.Type)
             {
-                if (!enumerator.MoveNext())
-                    return prevExpr;
+                case TokenType.Num:
+                    var number = new Number(token.Value);
 
-                var token = enumerator.Current;
+                    return CreateOp(number);
+                case TokenType.Minus: // TODO: prlly coalesce with functions
+                    return new Unary(EvalRec(enumerator), TokenType.Minus);
+                case TokenType.Func:
+                case TokenType.LeftParen:
+                    string func = token.Type == TokenType.Func
+                        ? enumerator.MoveNext()
+                            ? token.Value
+                            : throw new InvalidTokenException(token)
+                        : ""; // TODO: add minus, prlly use switch
 
-                switch (token.Type)
-                {
-                    case TokenType.Num:
-                        var number = new Number(token.Value);
-
-                        return CreateOp(number);
-                    case TokenType.Minus: // TODO: prlly coalesce with functions
-                        return new Unary(EvalRec(enumerator), TokenType.Minus);
-                    case TokenType.Func:
-                    case TokenType.LeftParen:
-                        string func = token.Type == TokenType.Func
-                            ? enumerator.MoveNext()
-                                ? token.Value
-                                : throw new InvalidTokenException(token)
-                            : ""; // TODO: add minus, prlly use switch
-
-                        if (enumerator.Current.Type != TokenType.LeftParen)
-                            throw new InvalidTokenException(enumerator.Current);
-
-                        var grouping = new Grouping(EvalRec(enumerator), func);
-
-                        return CreateOp(grouping);
-                    case TokenType.RightParen:
-                        return prevExpr;
-                    default:
-                        throw new InvalidTokenException(token);
-                }
-
-                Expr CreateOp(Expr? ex)
-                {
-                    if (!enumerator.MoveNext() || enumerator.Current.Type == TokenType.RightParen)
-                        return ex;
-
-                    // TODO: use typed tokens, with Current as Operation
-                    if (!enumerator.Current.IsOperation())
+                    if (enumerator.Current.Type != TokenType.LeftParen)
                         throw new InvalidTokenException(enumerator.Current);
 
-                    var operation = enumerator.Current;
+                    var grouping = new Grouping(EvalRec(enumerator), func);
 
-                    var expr = operation.HasHigherPriorityThen(prevOp)
-                        ? ex
-                        : new Binary(prevExpr, prevOp, ex);
+                    return CreateOp(grouping);
+                case TokenType.RightParen:
+                    return prevExpr;
+                default:
+                    throw new InvalidTokenException(token);
+            }
 
-                    var nextExpr = EvalRec(enumerator, expr, enumerator.Current);
+            Expr CreateOp(Expr? ex)
+            {
+                if (!enumerator.MoveNext() || enumerator.Current.Type == TokenType.RightParen)
+                    return ex;
 
-                    return new Binary(expr, operation, nextExpr);
-                }
+                // TODO: use typed tokens, with Current as Operation
+                if (!enumerator.Current.IsOperation())
+                    throw new InvalidTokenException(enumerator.Current);
+
+                var operation = enumerator.Current;
+
+                var expr = operation.HasHigherPriorityThen(prevOp)
+                    ? ex
+                    : new Binary(prevExpr, prevOp, ex);
+
+                var nextExpr = EvalRec(enumerator, expr, enumerator.Current);
+
+                return new Binary(expr, operation, nextExpr);
             }
         }
     }
