@@ -31,6 +31,10 @@ namespace Experiments
         {
             (Type, Value, Index) = (type, value, index);
         }
+        public Token(string value, int index)
+        {
+            (Type, Value, Index) = (TokenType.None, value, index);
+        }
         public TokenType Type { get; }
         public string Value { get; }
         public int Index { get; }
@@ -41,6 +45,49 @@ namespace Experiments
             Type == TokenType.Pow
             || prevToken is null
             || (int) Type / 10 > (int) prevToken.Type / 10;
+    }
+    class Paren : Token
+    {
+        public enum ParenType
+        {
+            Left,
+            Right,
+        }
+
+        public Paren(ParenType parenType, string value, int index) : base(value, index) => Type = parenType;
+        public ParenType Type { get; }
+        public Paren CreateLeft(Match match) => new Paren(ParenType.Left, match.Value, match.Index);
+    }
+    class Num : Token
+    {
+        public Num(string value, int index) : base(value, index) {}
+        public Num CreateNum(Match match) => new Num(match.Value, match.Index);
+    }
+
+    public class Func : Token
+    {
+        public Func(string value, int index) : base(value, index){}
+        public Func CreateFunc(Match match) => new Func(match.Value, match.Index);
+    }
+    
+    public class Operation : Token
+    {
+        public enum OpType
+        {
+            Plus = 10, //NOTE: first digit - priority
+            Minus,
+            Mult = 20,
+            Div,
+            Pow = 30,
+        }
+        private Operation(OpType type, string value, int index) : base(value, index) => this.Type = type;
+        public OpType Type { get; }
+        
+        public Operation CreatePlus(Match match) => new Operation(OpType.Plus, match.Value, match.Index);
+        public Operation CreateMult(Match match) => new Operation(OpType.Mult, match.Value, match.Index);
+        public Operation CreateMinus(Match match) => new Operation(OpType.Minus, match.Value, match.Index);
+        public Operation CreateDiv(Match match) => new Operation(OpType.Div, match.Value, match.Index);
+        public Operation CreatePow(Match match) => new Operation(OpType.Pow, match.Value, match.Index);
     }
 
     public class Evaluate
@@ -68,15 +115,21 @@ namespace Experiments
                                         .Select(match => new Token(tpl.tokenType, match.Value, match.Index)))
                 .OrderBy(token => token.Index)
                 .ThenByDescending(token => token.Lenght)
-                .FilterAndValidate()
+                .FilterAndValidate() // TODO: string expr pass as arg here
                 .Where(token => token.Type != TokenType.None);
 
-        public string Eval(string expr)
+        public string Eval(string expr, bool print = false)
         {
             try
             {
-                return EvalRec(Scan(expr).GetEnumerator())?.Eval().ToString()
+                
+                var ans = EvalRec(Scan(expr).GetEnumerator())?.Eval().ToString()
                        ?? throw new InvalidOperationException("Empty equation");
+
+                if (print)
+                    Console.WriteLine(EvalRec(Scan(expr).GetEnumerator()));
+
+                return ans;
             }
             catch (Exception)
             {
@@ -94,7 +147,6 @@ namespace Experiments
                 if (!enumerator.MoveNext())
                     return prevExpr;
 
-                // TODO: make like function or set like variable better throw experience (100 line)
                 var token = enumerator.Current;
 
                 switch (token.Type)
@@ -136,20 +188,13 @@ namespace Experiments
 
                     var operation = enumerator.Current;
 
-                    if (operation.HasHigherPriorityThen(prevOp))
-                    {
-                        var nextExpr = EvalRec(enumerator, ex, enumerator.Current);
+                    var expr = operation.HasHigherPriorityThen(prevOp)
+                        ? ex
+                        : new Binary(prevExpr, prevOp, ex);
 
-                        return new Binary(ex, operation.Type, nextExpr);
-                    }
-                    else
-                    {
-                        var expr = new Binary(prevExpr, prevOp.Type, ex);
+                    var nextExpr = EvalRec(enumerator, expr, enumerator.Current);
 
-                        var nextExpr = EvalRec(enumerator, expr, enumerator.Current);
-
-                        return new Binary(expr, operation.Type, nextExpr);
-                    }
+                    return new Binary(expr, operation, nextExpr);
                 }
             }
         }
@@ -170,6 +215,7 @@ namespace Experiments
         private double Value { get; }
 
         public override double Eval() => Value;
+        public override string ToString() => Value.ToString();
     }
 
     public abstract class NTExpr : Expr
@@ -203,15 +249,18 @@ namespace Experiments
 
         public Grouping(Expr arg, string func = default) : base(arg)
         {
+            FunctionStr = func;
             Function = string.IsNullOrEmpty(func)
                 ? x => x
                 : Funcs[func];
         }
         private Func<double, double> Function { get; }
+        private string FunctionStr { get; set; }
 
         public override double Eval() => Function(Arg.Eval());
 
         public static bool IsFuncExist(string func) => Funcs.ContainsKey(func);
+        public override string ToString() => $" {FunctionStr}( {Arg} )";
     }
 
     // TODO: merge unary and grouping
@@ -226,6 +275,7 @@ namespace Experiments
 
         private Func<double, double> Function { get; }
         public override double Eval() => Function(Arg.Eval());
+        public override string ToString() => $"-{Arg}";
     }
 
     public class Binary : NTExpr
@@ -239,16 +289,19 @@ namespace Experiments
             { TokenType.Pow, Math.Pow },
         };
 
-        public Binary(Expr arg, TokenType opToken, Expr arg2) : base(arg)
+        public Binary(Expr arg, Token opToken, Expr arg2) : base(arg)
         {
-            Function = BinaryOps[opToken];
+            OpStr = opToken.Value;
+            Function = BinaryOps[opToken.Type];
             Arg2 = arg2;
         }
 
         private Expr Arg2 { get; }
-
+        private string OpStr { get; }
         private Func<double, double, double> Function { get; }
         public override double Eval() => Function(Arg.Eval(), Arg2.Eval());
+
+        public override string ToString() => $"[ {Arg} {OpStr} {Arg2} ]";
     }
 
     public static class Ext

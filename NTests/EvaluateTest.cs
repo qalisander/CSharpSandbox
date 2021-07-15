@@ -1,5 +1,4 @@
 using System;
-using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Experiments;
@@ -17,13 +16,19 @@ namespace NTests
         [Test]
         public void Eval_Test1()
         {
-            Assert.AreEqual("18", ev.Eval("2*3&2"));
+            Assert.AreEqual("18", ev.Eval("2*3&2", true));
         }
         
         [Test]
         public void Eval_Test1_Parenthesis()
         {
-            Assert.AreEqual("18", ev.Eval("(2*3&2)"));
+            Assert.AreEqual("18", ev.Eval("(2*3&2)", true));
+        }
+        
+        [Test]
+        public void Eval_Test1_Minus()
+        {
+            Assert.AreEqual("-17", ev.Eval("-2*3&2 + 1", true));
         }
 
         [Test]
