@@ -111,7 +111,7 @@ namespace Experiments
             }
             catch (Exception)
             {
-#if DEBUG && MYTEST
+#if MYTEST
                 throw;
 #endif
                 return "ERROR";
@@ -128,6 +128,7 @@ namespace Experiments
 
             var token = enumerator.Current;
 
+            // TODO: refactor as alternation of: number/grouping/function creation <-> operation creation
             switch (token)
             {
                 case Num:

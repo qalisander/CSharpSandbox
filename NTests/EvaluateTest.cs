@@ -36,8 +36,19 @@ namespace NTests
         {
             var expr = "-2*3&2 + 1";
             
+            Console.WriteLine(expr + "\n");
             ev.Print(expr);
             Assert.AreEqual("-17", ev.Eval(expr));
+        }
+        
+        [Test]
+        public void Eval_Test1_Minus_2()
+        {
+            var expr = "-2 + 2";
+            
+            Console.WriteLine(expr + "\n");
+            ev.Print(expr);
+            Assert.AreEqual("0", ev.Eval(expr));
         }
 
         [Test]
