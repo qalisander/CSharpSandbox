@@ -15,10 +15,10 @@ namespace Experiments
         {
             return EvaluateSumRec(0, Math.Max(N, M), Math.Min(N, M));
 
-            long EvaluateSumRec(long init, long x, long y)
+            long EvaluateSumRec(long initial, long x, long y)
             {
                 if (x == 1 && y == 1)
-                    return init;
+                    return initial;
 
                 var xPow2 = Pow2((int) Math.Log2(x + 1));
                 var yPow2 = Pow2((int) Math.Log2(y + 1));
@@ -34,20 +34,20 @@ namespace Experiments
                     newX = x - xPow2;
                     newY = y - yPow2;
 
-                    newInit = xPow2 ^ yPow2 + init;
+                    newInit = xPow2 ^ yPow2 + initial;
 
-                    ans = SumRange(init, xPow2 - 1) * (xPow2 - 1)
-                          + SumRange(init + xPow2, init + xPow2 * 2 - 1) * (newX + 1)
-                          + SumRange(init + xPow2, init + xPow2 * 2 - 1) * ((newY -= yPow2) + 1);
+                    ans = SumRange(initial, xPow2 - 1, deduction, mod) * (xPow2 - 1)
+                          + SumRange(initial + xPow2, initial + xPow2 * 2 - 1, deduction, mod) * (newX + 1)
+                          + SumRange(initial + xPow2, initial + xPow2 * 2 - 1, deduction, mod) * ((newY -= yPow2) + 1);
                 }
                 else
                 {
                     newX = x - xPow2;
                     newY = y;
 
-                    newInit = xPow2 + init;
+                    newInit = xPow2 + initial;
 
-                    ans = SumRange(init, init + xPow2 - 1) * (newY + 1);
+                    ans = SumRange(initial, initial + xPow2 - 1, deduction, mod) * (newY + 1);
                 }
 
                 return ans % mod + EvaluateSumRec(
@@ -56,21 +56,20 @@ namespace Experiments
                     Math.Min(newX, newY));
             }
 
-            long SumRange(long from, long to) => SumRangeInternal(Deduct(from, deduction), Deduct(to, deduction), mod);
-
-            static long SumRangeInternal(long from, long to, long mod) =>
-                (long) (((ulong) from + (ulong) to) % (ulong) mod
-                    * ((ulong) to - (ulong) from + 1) % (ulong) mod
-                    / 2 % (ulong) mod);
-
-            [DebuggerStepThrough]
-            static long Deduct(long num, long deduction) => num >= deduction ? num - deduction : 0;
-
             [DebuggerStepThrough]
             static long Pow2(int pow) => 1L << pow;
+        }
+        public static long SumRange(long @from, long count, long deduction, long mod)
+        {
+            if (@from < 0 || count < 0 || deduction < 0 || mod < 0)
+                throw new ArgumentException("Negative argument");
 
-            // ModulusLong SumRange(long from, long to) =>
-            //     ModulusLong.SumRange((ModulusLong) from, (ModulusLong) to);
+            return (long)SumRangeInternal(Deduct((ulong)@from, (ulong)deduction), Deduct((ulong)count, (ulong)deduction), (ulong)mod);
+
+            static ulong SumRangeInternal(ulong from, ulong to, ulong mod) =>
+                (to - from - 1) * (from + to) / 2 % mod;
+
+            static ulong Deduct(ulong num, ulong delta) => num >= delta ? num - delta : 0;
         }
     }
 }
