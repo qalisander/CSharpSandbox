@@ -28,42 +28,5 @@ namespace NTests
             // Assert.AreEqual((long) 808451, Immortal.ElderAge(545, 435, 342, 1000007));
             // Assert.AreEqual((long) 5456283, Immortal.ElderAge(28_827_050_410L, 35_165_045_587L, 7109602, 13719506));
         }
-
-        [Test]
-        public void Subtraction_ModulusLongTest()
-        {
-            Immortal.ModulusLong.Modulus = 10;
-
-            var left = new Immortal.ModulusLong(9);
-            var right = new Immortal.ModulusLong(7);
-
-            Assert.AreEqual(new Immortal.ModulusLong(2), left - right);
-            Assert.AreEqual(new Immortal.ModulusLong(8), right - left);
-        }
-
-        [Test]
-        public void SumRange_ModulusLongTest()
-        {
-            Immortal.ModulusLong.Modulus = 12;
-
-            var from = new Immortal.ModulusLong(7);
-            var to = new Immortal.ModulusLong(11);
-
-            // Assert.AreEqual(new Immortal.ModulusLong(7 + 8 + 9 + 10 + 11), Immortal.ModulusLong.SumRange(from, to));
-
-            Assert.AreEqual(new Immortal.ModulusLong(7 + 8 + 9 + 10 + 11), Immortal.ModulusLong.SumRange(from, (long)5));
-        }
-
-        // [Test]
-        // [TestCase(7, 11, 12)]
-        // [TestCase(15, 11, 123231)]
-        // public void Pow_ModulusLongTest(long num, int pow, long mod)
-        // {
-        //     Immortal.ModulusLong.Modulus = mod;
-        //
-        //     var mlNum = new Immortal.ModulusLong(num);
-        //
-        //     Assert.AreEqual(new Immortal.ModulusLong((long) Math.Pow(num, pow)), mlNum ^ pow);
-        // }
     }
 }

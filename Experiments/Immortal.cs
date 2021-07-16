@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Linq;
-using System.Security.Cryptography;
-using BenchmarkDotNet.Environments;
 
 namespace Experiments
 {
+    // https://www.codewars.com/kata/59568be9cc15b57637000054
     public static class Immortal
     {
         //TODO: use int extensions methods for addition
@@ -15,8 +13,6 @@ namespace Experiments
 
         public static long ElderAge(long N, long M, long deduction, long mod)
         {
-            ModulusLong.Modulus = long.MaxValue;
-
             return EvaluateSumRec(0, Math.Max(N, M), Math.Min(N, M));
 
             long EvaluateSumRec(long init, long x, long y)
@@ -75,79 +71,6 @@ namespace Experiments
 
             // ModulusLong SumRange(long from, long to) =>
             //     ModulusLong.SumRange((ModulusLong) from, (ModulusLong) to);
-        }
-
-
-        public struct ModulusLong : IEquatable<ModulusLong>, IComparable<ModulusLong>
-        {
-            private readonly long _value;
-            private ulong Ulong => (ulong) _value;
-
-            public static long Modulus { get; set; }
-
-            public ModulusLong(long value)
-            {
-                _value = value >= 0
-                    ? value % Modulus
-                    : value % Modulus + Modulus;
-            }
-
-            public ModulusLong(ulong value)
-            {
-                _value = (long)(value % (ulong)Modulus);
-            }
-
-            public static ModulusLong One => new ModulusLong(1);
-
-            public static ModulusLong Two => new ModulusLong(2);
-
-            public static ModulusLong SumRange(ModulusLong from, ModulusLong to) =>
-                new ModulusLong(checked((from.Ulong + to.Ulong) * (to.Ulong - from.Ulong + 1)) / 2);
-
-            public static ModulusLong SumRange(ModulusLong from, long count) =>
-                new ModulusLong(checked((from.Ulong * 2 + (ulong)count - 1) * (ulong)count) / 2);
-
-            public ModulusLong Pow(int pow) =>
-                Enumerable.Repeat(this, pow).Aggregate((ml1, ml2) => ml1 * ml2);
-
-            #region operators
-
-            public static bool operator <(ModulusLong left, ModulusLong right) => left.CompareTo(right) < 0;
-            
-            public static bool operator >(ModulusLong left, ModulusLong right) => left.CompareTo(right) > 0;
-            
-            public static bool operator <=(ModulusLong left, ModulusLong right) => left.CompareTo(right) <= 0;
-            
-            public static bool operator >=(ModulusLong left, ModulusLong right) => left.CompareTo(right) >= 0;
-
-            public static ModulusLong operator +(ModulusLong left, ModulusLong right) =>
-                new ModulusLong(checked(left.Ulong + right.Ulong));
-
-            public static ModulusLong operator -(ModulusLong left, ModulusLong right) =>
-                new ModulusLong(left._value - right._value);
-
-            public static ModulusLong operator *(ModulusLong left, ModulusLong right) =>
-                new ModulusLong(checked(left.Ulong * right.Ulong));
-
-            public static implicit operator ModulusLong(int num) => new ModulusLong(num);
-
-            public static explicit operator long(ModulusLong ml) => ml._value;
-
-            #endregion
-
-            #region compare equals
-
-            public int CompareTo(ModulusLong other) => _value.CompareTo(other._value);
-
-            public bool Equals(ModulusLong other) => _value == other._value;
-
-            public override bool Equals(object? obj) => obj is ModulusLong other && Equals(other);
-
-            public override int GetHashCode() => _value.GetHashCode();
-
-            public override string ToString() => _value.ToString();
-
-            #endregion
         }
     }
 }
