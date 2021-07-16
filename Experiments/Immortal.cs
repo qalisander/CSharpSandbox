@@ -59,17 +59,25 @@ namespace Experiments
             [DebuggerStepThrough]
             static long Pow2(int pow) => 1L << pow;
         }
-        public static long SumRange(long @from, long count, long deduction, long mod)
+        public static long SumRange(long numFrom, long count, long deduction, long mod)
         {
-            if (@from < 0 || count < 0 || deduction < 0 || mod < 0)
+            if (numFrom < 0 || count < 0 || deduction < 0 || mod < 0)
                 throw new ArgumentException("Negative argument");
 
-            return (long)SumRangeInternal(Deduct((ulong)@from, (ulong)deduction), Deduct((ulong)count, (ulong)deduction), (ulong)mod);
+            if (numFrom >= deduction)
+            {
+                numFrom -= deduction;
+            }
+            else
+            {
+                count -= deduction - numFrom;
+                numFrom = 0;
+            }
 
-            static ulong SumRangeInternal(ulong from, ulong to, ulong mod) =>
-                (to - from - 1) * (from + to) / 2 % mod;
+            return (long) SumRangeInternal((ulong) numFrom, (ulong) count, (ulong) mod);
 
-            static ulong Deduct(ulong num, ulong delta) => num >= delta ? num - delta : 0;
+            static ulong SumRangeInternal(ulong from, ulong count, ulong mod) =>
+                (from + count + 1) * count / 2 % mod;
         }
     }
 }

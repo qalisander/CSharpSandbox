@@ -31,11 +31,11 @@ namespace NTests
         }
 
         [Test]
-        [TestCase(5, 20, 10, 5, 0)]
-        [TestCase(5, 20, 11, 7, 1)]
-        public void SumRangeTest(long from, long count, long deduction, long mod, long expected)
+        [TestCase(5, 14, 10, 5, 0)]
+        [TestCase(5, 14, 11, 7, 1)]
+        public void SumRangeTest(long numFrom, long count, long deduction, long mod, long expected)
         {
-            Immortal.SumRange(from, count, deduction, mod).Should().Be(expected);
+            Immortal.SumRange(numFrom, count, deduction, mod).Should().Be(expected);
        }
     }
 }
