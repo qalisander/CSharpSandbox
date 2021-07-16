@@ -67,7 +67,10 @@ namespace NTests
         [Test]
         public void Eval_Test6()
         {
-            Assert.AreEqual("169", ev.Eval("abs(-(-1+(2*(4--3)))&2)"));
+            var expr = "abs(-(-1+(2*(4--3)))&2)";
+            
+            ev.Print(expr);
+            Assert.AreEqual("169", ev.Eval(expr));
         }
 
         [Test]
@@ -77,7 +80,7 @@ namespace NTests
         {
             var tokens = ev.Scan(equation);
             Console.WriteLine(equation);
-            Console.WriteLine(string.Join("; ", tokens));
+            Console.WriteLine(string.Join("\n", tokens));
             tokens.Should().HaveCount(tokenCount);
         }
 
@@ -88,9 +91,10 @@ namespace NTests
         public void Eval_ScanTest_Fail(string equation)
         {
             Action act = () => ev.Scan(equation).ToArray();
-            act.Should().Throw<InvalidOperationException>();
+            act.Should().Throw<InvalidTokenException>();
         }
 
+        [Ignore("regexp test")]
         [Test]
         public void Regexp_test()
         {
