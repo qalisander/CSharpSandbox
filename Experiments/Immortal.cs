@@ -59,6 +59,8 @@ namespace Experiments
             [DebuggerStepThrough]
             static long Pow2(int pow) => 1L << pow;
         }
+        
+        // NOTE: prlly add range to num
         public static long SumRange(long numFrom, long count, long deduction, long mod)
         {
             if (numFrom < 0 || count < 0 || deduction < 0 || mod < 0)
@@ -66,11 +68,12 @@ namespace Experiments
 
             if (numFrom >= deduction)
             {
+                count -= 1;
                 numFrom -= deduction;
             }
             else
             {
-                count -= deduction - numFrom;
+                count -= deduction - numFrom + 1;
                 numFrom = 0;
             }
 

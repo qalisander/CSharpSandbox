@@ -31,8 +31,9 @@ namespace NTests
         }
 
         [Test]
-        [TestCase(5, 14, 10, 5, 0)]
-        [TestCase(5, 14, 11, 7, 1)]
+        [TestCase(10, 2, 10, 100500, 1)] // 0 + 1 mod 100500 = 1
+        [TestCase(5, 14, 10, 5, 1)] // 0 ... 0 + 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 mod 5 = 1 
+        [TestCase(5, 14, 11, 7, 0)] // 0 ... 0 + 1 + 2 + 3 + 4 + 5 + 6 + 7 mod 7 = 0
         public void SumRangeTest(long numFrom, long count, long deduction, long mod, long expected)
         {
             Immortal.SumRange(numFrom, count, deduction, mod).Should().Be(expected);
