@@ -9,16 +9,16 @@ using System.Text.RegularExpressions;
 // Lexer examples https://github.com/mauriciomoccelin/compiler
 namespace Experiments
 {
-    // TODO: create different token hierarchies: op, func, paren, num, space
-    // TODO: print console messages with underlining 
-    public enum TokenType
+    public enum ParenType
     {
-        None,
-        LeftParen,
-        RightParen,
-        Num,
-        Func,
-        Plus = 10, //NOTE: first digit - priority
+        Left,
+        Right,
+    }
+    
+    public enum OpType
+    {
+        //NOTE: first digit - priority
+        Plus = 10,
         Minus,
         Mult = 20,
         Div,
@@ -27,102 +27,81 @@ namespace Experiments
 
     public class Token
     {
-        public Token(TokenType type, string value, int index)
-        {
-            (Type, Value, Index) = (type, value, index);
-        }
-        public Token(string value, int index)
-        {
-            (Type, Value, Index) = (TokenType.None, value, index);
-        }
-        public TokenType Type { get; }
+        protected Token(Match match) => (Value, Index) = (match.Value, match.Index);
         public string Value { get; }
         public int Index { get; }
         public int Lenght => Value.Length;
-        public override string ToString() => $"<{Type} id[{Index}] '{Value}'>";
-        public bool IsOperation() => Type >= TokenType.Plus;
-        public bool HasHigherPriorityThen(Token prevToken) =>
-            Type == TokenType.Pow
-            || prevToken is null
-            || (int) Type / 10 > (int) prevToken.Type / 10;
+        public override string ToString() => $"<{GetType().Name} id[{Index}] '{Value}'>";
     }
-    class Paren : Token
+    
+    internal class Space : Token
     {
-        public enum ParenType
-        {
-            Left,
-            Right,
-        }
-
-        public Paren(ParenType parenType, string value, int index) : base(value, index) => Type = parenType;
+        private Space(Match match) : base(match) { }
+        public static Space Create(Match match) => new Space(match);
+    }
+    
+    internal class Paren : Token
+    {
+        private Paren(ParenType parenType, Match match) : base(match) => Type = parenType;
         public ParenType Type { get; }
-        public Paren CreateLeft(Match match) => new Paren(ParenType.Left, match.Value, match.Index);
+        public static Func<Match, Paren> Create(ParenType type) =>
+            match => new Paren(type, match);
     }
-    class Num : Token
+    
+    internal class Num : Token
     {
-        public Num(string value, int index) : base(value, index) {}
-        public Num CreateNum(Match match) => new Num(match.Value, match.Index);
+        private Num(Match match) : base(match) { }
+        public static Num Create(Match match) => new Num(match);
     }
 
     public class Func : Token
     {
-        public Func(string value, int index) : base(value, index){}
-        public Func CreateFunc(Match match) => new Func(match.Value, match.Index);
+        private Func(Match match) : base(match) { }
+        public static Func Create(Match match) => new Func(match);
     }
-    
+
     public class Operation : Token
     {
-        public enum OpType
-        {
-            Plus = 10, //NOTE: first digit - priority
-            Minus,
-            Mult = 20,
-            Div,
-            Pow = 30,
-        }
-        private Operation(OpType type, string value, int index) : base(value, index) => this.Type = type;
+        private Operation(OpType type, Match match) : base(match) => Type = type;
         public OpType Type { get; }
-        
-        public Operation CreatePlus(Match match) => new Operation(OpType.Plus, match.Value, match.Index);
-        public Operation CreateMult(Match match) => new Operation(OpType.Mult, match.Value, match.Index);
-        public Operation CreateMinus(Match match) => new Operation(OpType.Minus, match.Value, match.Index);
-        public Operation CreateDiv(Match match) => new Operation(OpType.Div, match.Value, match.Index);
-        public Operation CreatePow(Match match) => new Operation(OpType.Pow, match.Value, match.Index);
+
+        public bool HasHigherPriorityThen(Operation prevOp) =>
+            Type == OpType.Pow
+            || prevOp is null //TODO: prlly remove
+            || (int) Type / 10 > (int) prevOp.Type / 10;
+
+        public static Func<Match, Token> Create(OpType type) =>
+            match => new Operation(type, match);
     }
 
     public class Evaluate
     {
-        public readonly List<(string regexp, TokenType tokenType)> RegexpToToken = new()
+        public readonly List<(string regexp, Func<Match, Token> createToken)> RegexpToToken = new()
         {
-            ( /*language=regexp*/ @"\d+(\.?\d+)?([eE]-?\d+)?", TokenType.Num), // TODO: use factory methods
-            ( /*language=regexp*/ "[A-Za-z]+", TokenType.Func),
-            ( /*language=regexp*/ @"\(", TokenType.LeftParen),
-            ( /*language=regexp*/ @"\)", TokenType.RightParen),
-            ( /*language=regexp*/ "-", TokenType.Minus),
-            ( /*language=regexp*/ @"\+", TokenType.Plus),
-            ( /*language=regexp*/ @"\*", TokenType.Mult),
-            ( /*language=regexp*/ "/", TokenType.Div),
-            ( /*language=regexp*/ "&", TokenType.Pow),
-            ( /*language=regexp*/ @"\s+", TokenType.None),
+            ( /*language=regexp*/ @"\d+(\.?\d+)?([eE]-?\d+)?", Num.Create),
+            ( /*language=regexp*/ "[A-Za-z]+", Func.Create),
+            ( /*language=regexp*/ @"\(", Paren.Create(ParenType.Left)),
+            ( /*language=regexp*/ @"\)", Paren.Create(ParenType.Right)),
+            ( /*language=regexp*/ "-", Operation.Create(OpType.Minus)),
+            ( /*language=regexp*/ @"\+", Operation.Create(OpType.Plus)),
+            ( /*language=regexp*/ @"\*", Operation.Create(OpType.Mult)),
+            ( /*language=regexp*/ "/", Operation.Create(OpType.Div)),
+            ( /*language=regexp*/ "&", Operation.Create(OpType.Pow)),
+            ( /*language=regexp*/ @"\s+", Space.Create),
         };
 
         // https://docs.microsoft.com/en-us/dotnet/standard/base-types/regular-expression-options
         // https://en.wikipedia.org/wiki/Lexical_grammar
         // https://en.wikipedia.org/wiki/Lexical_analysis
         public IEnumerable<Token> Scan(string expr) =>
-            RegexpToToken
-                .SelectMany(tpl => Regex.Matches(expr, tpl.regexp)
-                                        .Select(match => new Token(tpl.tokenType, match.Value, match.Index)))
-                .OrderBy(token => token.Index)
-                .ThenByDescending(token => token.Lenght)
-                .FilterAndValidate() // TODO: string expr pass as arg here
-                .Where(token => token.Type != TokenType.None);
+            RegexpToToken.SelectMany(tuple => Regex.Matches(expr, tuple.regexp).Select(tuple.createToken))
+                         .OrderBy(token => token.Index)
+                         .ThenByDescending(token => token.Lenght)
+                         .FilterAndValidate() // TODO: string expr pass as arg here
+                         .Where(token => !(token is Space));
 
-        public void Print(string expr)
-        {
-            Console.WriteLine(EvalRec(Scan(expr).GetEnumerator()));
-        }
-        
+        public void Print(string expr) => Console.WriteLine(EvalRec(Scan(expr).GetEnumerator()));
+
         public string Eval(string expr)
         {
             try
@@ -142,36 +121,36 @@ namespace Experiments
         private Expr EvalRec(
             IEnumerator<Token> enumerator,
             Expr prevExpr = null,
-            Token prevOp = null) //add previous unaccomplished operation
+            Operation prevOp = null) //previous unaccomplished operation
         {
             if (!enumerator.MoveNext())
                 return prevExpr;
 
             var token = enumerator.Current;
 
-            switch (token.Type)
+            switch (token)
             {
-                case TokenType.Num:
+                case Num:
                     var number = new Number(token.Value);
 
                     return CreateOp(number);
-                case TokenType.Minus: // TODO: prlly coalesce with functions
-                    return new Unary(EvalRec(enumerator), TokenType.Minus);
-                case TokenType.Func:
-                case TokenType.LeftParen:
-                    string func = token.Type == TokenType.Func
+                case Operation { Type: OpType.Minus }: // TODO: prlly coalesce with functions
+                    return new Unary(EvalRec(enumerator));
+                case Func:
+                case Paren { Type: ParenType.Left}:
+                    string func = token is Func
                         ? enumerator.MoveNext()
                             ? token.Value
                             : throw new InvalidTokenException(token)
                         : ""; // TODO: add minus, prlly use switch
 
-                    if (enumerator.Current.Type != TokenType.LeftParen)
+                    if (!(enumerator.Current is Paren { Type: ParenType.Left }))
                         throw new InvalidTokenException(enumerator.Current);
 
                     var grouping = new Grouping(EvalRec(enumerator), func);
 
                     return CreateOp(grouping);
-                case TokenType.RightParen:
+                case Paren { Type: ParenType.Right}:
                     return prevExpr;
                 default:
                     throw new InvalidTokenException(token);
@@ -179,20 +158,17 @@ namespace Experiments
 
             Expr CreateOp(Expr? ex)
             {
-                if (!enumerator.MoveNext() || enumerator.Current.Type == TokenType.RightParen)
+                if (!enumerator.MoveNext() || enumerator.Current is Paren { Type: ParenType.Right})
                     return ex;
 
-                // TODO: use typed tokens, with Current as Operation
-                if (!enumerator.Current.IsOperation())
+                if (!(enumerator.Current is Operation operation))
                     throw new InvalidTokenException(enumerator.Current);
-
-                var operation = enumerator.Current;
 
                 var expr = operation.HasHigherPriorityThen(prevOp)
                     ? ex
                     : new Binary(prevExpr, prevOp, ex);
 
-                var nextExpr = EvalRec(enumerator, expr, enumerator.Current);
+                var nextExpr = EvalRec(enumerator, expr, operation);
 
                 return new Binary(expr, operation, nextExpr);
             }
@@ -249,12 +225,13 @@ namespace Experiments
         public Grouping(Expr arg, string func = default) : base(arg)
         {
             FunctionStr = func;
+
             Function = string.IsNullOrEmpty(func)
                 ? x => x
                 : Funcs[func];
         }
         private Func<double, double> Function { get; }
-        private string FunctionStr { get; set; }
+        private string FunctionStr { get; }
 
         public override double Eval() => Function(Arg.Eval());
 
@@ -265,11 +242,9 @@ namespace Experiments
     // TODO: merge unary and grouping
     public class Unary : NTExpr
     {
-        public Unary(Expr arg, TokenType opToken) : base(arg)
+        public Unary(Expr arg) : base(arg)
         {
-            Function = opToken == TokenType.Minus
-                ? x => -x
-                : throw new NotSupportedException();
+            Function = x => -x;
         }
 
         private Func<double, double> Function { get; }
@@ -279,19 +254,19 @@ namespace Experiments
 
     public class Binary : NTExpr
     {
-        private static readonly Dictionary<TokenType, Func<double, double, double>> BinaryOps = new()
+        private static readonly Dictionary<OpType, Func<double, double, double>> BinaryOps = new()
         {
-            { TokenType.Plus, (x, y) => x + y },
-            { TokenType.Minus, (x, y) => x - y },
-            { TokenType.Mult, (x, y) => x * y },
-            { TokenType.Div, (x, y) => x / y },
-            { TokenType.Pow, Math.Pow },
+            { OpType.Plus, (x, y) => x + y },
+            { OpType.Minus, (x, y) => x - y },
+            { OpType.Mult, (x, y) => x * y },
+            { OpType.Div, (x, y) => x / y },
+            { OpType.Pow, Math.Pow },
         };
 
-        public Binary(Expr arg, Token opToken, Expr arg2) : base(arg)
+        public Binary(Expr arg, Operation op, Expr arg2) : base(arg)
         {
-            OpStr = opToken.Value;
-            Function = BinaryOps[opToken.Type];
+            OpStr = op.Value;
+            Function = BinaryOps[op.Type];
             Arg2 = arg2;
         }
 
@@ -312,14 +287,14 @@ namespace Experiments
             foreach (var token in tokens)
             {
                 var expectedIndex = prev?.Index + prev?.Lenght;
-                
+
                 if (token.Index > expectedIndex)
                     throw new InvalidTokenException(token);
 
                 if (token.Index < expectedIndex)
                     continue;
 
-                if (token.Type == TokenType.Func && !Grouping.IsFuncExist(token.Value))
+                if (token is Func && !Grouping.IsFuncExist(token.Value))
                     throw new InvalidTokenException(token);
 
                 yield return prev = token;
@@ -330,7 +305,7 @@ namespace Experiments
     public class InvalidTokenException : Exception
     {
         public InvalidTokenException(Token token) : base($"Invalid token: {token}") { }
-        
+
         //TODO: Invalid string between tokens exception, token has context of string
     }
 }
