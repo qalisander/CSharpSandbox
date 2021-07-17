@@ -11,43 +11,50 @@ namespace Experiments
         /// set true to enable debug
         public static bool Debug = false;
 
-        public static long ElderAge(long N, long M, long deduction, long mod)
+        public static long ElderAge(long N, long M, long k, long newp)
         {
-            return EvaluateSumRec(0, Math.Max(N, M), Math.Min(N, M));
+            if (N < 0 || M < 0 || k < 0 || newp < 0)
+                throw new ArgumentException("Negative argument");
 
-            long EvaluateSumRec(long initial, long x, long y)
+            ulong deduction = (ulong)k;
+            ulong mod = (ulong)newp;
+            
+            return (long)EvaluateSumRec(0, (ulong)Math.Max(N, M), (ulong)Math.Min(N, M));
+
+            ulong EvaluateSumRec(ulong init, ulong x, ulong y)
             {
+                if (x == 0 || y == 0)
+                    return 0;
+
                 if (x == 1 && y == 1)
-                    return initial;
+                    return init;
 
-                var xPow2 = Pow2((int) Math.Log2(x + 1));
-                var yPow2 = Pow2((int) Math.Log2(y + 1));
+                // TODO: lowerPow -> pow2
+                ulong xLowerPow2 = Pow2((int) Math.Log2(x + 1)); // TODO: remove 1
+                ulong yLowerPow2 = Pow2((int) Math.Log2(y + 1));
 
-                long newX;
-                long newY;
-                long newInit;
+                ulong newX;
+                ulong newY;
+                ulong newInit;
+                ulong ans;
 
-                long ans;
-
-                if (xPow2 == yPow2)
+                if (xLowerPow2 == yLowerPow2)
                 {
-                    newX = x - xPow2;
-                    newY = y - yPow2;
+                    newX = x - xLowerPow2;
+                    newY = y - xLowerPow2;
+                    newInit = xLowerPow2 ^ yLowerPow2 + init; // NOTE: 64 + 16 = 80
 
-                    newInit = xPow2 ^ yPow2 + initial;
-
-                    ans = SumRange(initial, xPow2 - 1, deduction, mod) * (xPow2 - 1)
-                          + SumRange(initial + xPow2, initial + xPow2 * 2 - 1, deduction, mod) * (newX + 1)
-                          + SumRange(initial + xPow2, initial + xPow2 * 2 - 1, deduction, mod) * ((newY -= yPow2) + 1);
+                    ans = SumRange(init, xLowerPow2, deduction, mod) * xLowerPow2
+                          + SumRange(init + xLowerPow2, newX, deduction, mod) * xLowerPow2
+                          + SumRange(init + xLowerPow2, newY, deduction, mod) * xLowerPow2;
                 }
-                else
+                else 
                 {
-                    newX = x - xPow2;
+                    newX = x - xLowerPow2;
                     newY = y;
+                    newInit = xLowerPow2 + init;
 
-                    newInit = xPow2 + initial;
-
-                    ans = SumRange(initial, initial + xPow2 - 1, deduction, mod) * (newY + 1);
+                    ans = SumRange(init, xLowerPow2, deduction, mod) * y;
                 }
 
                 return ans % mod + EvaluateSumRec(
@@ -57,30 +64,22 @@ namespace Experiments
             }
 
             [DebuggerStepThrough]
-            static long Pow2(int pow) => 1L << pow;
+            static ulong Pow2(int pow) => (ulong)1L << pow;
         }
         
-        // NOTE: prlly add range to num
-        public static long SumRange(long numFrom, long count, long deduction, long mod)
+        public static ulong SumRange(ulong numFrom, ulong count, ulong deduction, ulong mod)
         {
-            if (numFrom < 0 || count < 0 || deduction < 0 || mod < 0)
-                throw new ArgumentException("Negative argument");
-
             if (numFrom >= deduction)
             {
-                count -= 1;
                 numFrom -= deduction;
             }
             else
             {
-                count -= deduction - numFrom + 1;
+                count -= deduction - numFrom;
                 numFrom = 0;
             }
 
-            return (long) SumRangeInternal((ulong) numFrom, (ulong) count, (ulong) mod);
-
-            static ulong SumRangeInternal(ulong from, ulong count, ulong mod) =>
-                (from + count + 1) * count / 2 % mod;
+            return count * (numFrom * 2 + count - 1) / 2 % mod;
         }
     }
 }

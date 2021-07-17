@@ -1,5 +1,4 @@
-﻿using System;
-using Experiments;
+﻿using Experiments;
 using FluentAssertions;
 using NUnit.Framework;
 
@@ -19,6 +18,7 @@ namespace NTests
         [TestCase(5456283, 28_827_050_410L, 35_165_045_587L, 7109602, 13719506)]
         public void ElderAgeTest(long ans, long N, long M, long deduction, long mod)
         {
+            
             Assert.AreEqual(ans, Immortal.ElderAge(N, M, deduction, mod));
 
             // Assert.AreEqual((long) 5, Immortal.ElderAge(8, 5, 1, 100));
@@ -32,11 +32,12 @@ namespace NTests
 
         [Test]
         [TestCase(10, 2, 10, 100500, 1)] // 0 + 1 mod 100500 = 1
-        [TestCase(5, 14, 10, 5, 1)] // 0 ... 0 + 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 mod 5 = 1 
-        [TestCase(5, 14, 11, 7, 0)] // 0 ... 0 + 1 + 2 + 3 + 4 + 5 + 6 + 7 mod 7 = 0
+        [TestCase(5, 14, 10, 5, 1)]      // 0 ... 0 + 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 mod 5 = 1   
+        [TestCase(5, 14, 11, 7, 0)]      // 0 ... 0 + 1 + 2 + 3 + 4 + 5 + 6 + 7 mod 7 = 0
+        [TestCase(0, 8, 1, 100, 21)]      // 0 ... 0 + 1 + 2 + 3 + 4 + 5 + 6 mod 100 = 21
         public void SumRangeTest(long numFrom, long count, long deduction, long mod, long expected)
         {
-            Immortal.SumRange(numFrom, count, deduction, mod).Should().Be(expected);
-       }
+            Immortal.SumRange((ulong)numFrom, (ulong)count, (ulong)deduction, (ulong)mod).Should().Be((ulong)expected);
+        }
     }
 }
