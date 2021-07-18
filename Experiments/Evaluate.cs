@@ -1,7 +1,6 @@
 ﻿#define MYTEST
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -90,7 +89,7 @@ namespace Experiments
                 ( /*language=regexp*/ "/", Operation.Create(OpType.Div)),
                 ( /*language=regexp*/ "&", Operation.Create(OpType.Pow)),
                 ( /*language=regexp*/ @"\s+", Space.Create),
-        };
+            };
 
         // https://docs.microsoft.com/en-us/dotnet/standard/base-types/regular-expression-options
         // https://en.wikipedia.org/wiki/Lexical_grammar
@@ -99,7 +98,7 @@ namespace Experiments
             RegexpToToken.SelectMany(tuple => Regex.Matches(expr, tuple.regexp).Select(tuple.createToken))
                          .OrderBy(token => token.Index)
                          .ThenByDescending(token => token.Lenght)
-                         .FilterAndValidate() // TODO: string expr pass as arg here for better exception experience
+                         .FilterAndValidate() // TODO: string expr pass as arg here
                          .Where(token => !(token is Space));
 
         public void Print(string expr) => Console.WriteLine(EvalRec(Scan(expr).GetEnumerator()));
@@ -130,43 +129,50 @@ namespace Experiments
 
             var token = enumerator.Current;
 
-            var nextExp = token switch
+            // TODO: refactor as alternation of: number/grouping/function creation <-> operation creation
+            switch (token)
             {
-                Num _ => new Number(token.Value),
-                Operation { Type: OpType.Minus } => new Unary(EvalRec(enumerator)), // TODO: prlly coalesce with functions
-                var binary when binary is Func
-                                || binary is Paren { Type: ParenType.Left } => CreateBinary(),
-                _ => throw  new InvalidTokenException(token),
-            };
+                case Num _:
+                    var number = new Number(token.Value);
 
-            if (!enumerator.MoveNext() || enumerator.Current is Paren { Type: ParenType.Right})
-                return nextExp;
+                    return CreateOp(number);
+                case Operation { Type: OpType.Minus }: // TODO: prlly coalesce with functions
+                    return new Unary(EvalRec(enumerator));
+                case Func _:
+                case Paren { Type: ParenType.Left}:
+                    string func = token is Func
+                        ? enumerator.MoveNext()
+                            ? token.Value
+                            : throw new InvalidTokenException(token)
+                        : ""; // TODO: add minus, prlly use switch
 
-            if (!(enumerator.Current is Operation operation))
-                throw new InvalidTokenException(enumerator.Current);
+                    if (!(enumerator.Current is Paren { Type: ParenType.Left }))
+                        throw new InvalidTokenException(enumerator.Current);
 
-            var expr = operation.HasHigherPriorityThen(prevOp)
-                ? nextExp
-                : new Binary(prevExpr, prevOp, nextExp);
+                    var grouping = new Grouping(EvalRec(enumerator), func);
 
-            var nextExpr = EvalRec(enumerator, expr, operation);
+                    return CreateOp(grouping);
+                case Paren { Type: ParenType.Right}:
+                    return prevExpr;
+                default:
+                    throw new InvalidTokenException(token);
+            }
 
-            return new Binary(expr, operation, nextExpr);
-
-            Expr CreateBinary()
+            Expr CreateOp(Expr? ex)
             {
-                string func = token is Func
-                    ? enumerator.MoveNext()
-                        ? token.Value
-                        : throw new InvalidTokenException(token)
-                    : ""; // TODO: add minus, prlly use switch
-                
-                if (!(enumerator.Current is Paren { Type: ParenType.Left }))
+                if (!enumerator.MoveNext() || enumerator.Current is Paren { Type: ParenType.Right})
+                    return ex;
+
+                if (!(enumerator.Current is Operation operation))
                     throw new InvalidTokenException(enumerator.Current);
-                
-                var grouping = new Grouping(EvalRec(enumerator), func);
-                
-                return grouping;
+
+                var expr = operation.HasHigherPriorityThen(prevOp)
+                    ? ex
+                    : new Binary(prevExpr, prevOp, ex);
+
+                var nextExpr = EvalRec(enumerator, expr, operation);
+
+                return new Binary(expr, operation, nextExpr);
             }
         }
     }
