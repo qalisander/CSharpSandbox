@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Numerics;
+using BenchmarkDotNet.Validators;
 
 namespace Experiments
 {
@@ -9,28 +11,28 @@ namespace Experiments
         /// set true to enable debug
         public static bool Debug = false;
 
-        public static long ElderAge(long N, long M, long k, long newp)
+        public static long ElderAge(long N, long M, long deduction, long mod)
         {
-            if (N < 0 || M < 0 || k < 0 || newp < 0)
+            if (N < 0 || M < 0 || deduction < 0 || mod < 0)
                 throw new ArgumentException("Negative argument");
 
-            var deduction = (ulong) k;
-            var mod = (ulong) newp;
+            var bigIntN = new BigInteger(N);
+            var bigIntM = new BigInteger(M);
 
-            return (long) EvaluateSumRec(0, (ulong) Math.Max(N, M), (ulong) Math.Min(N, M));
+            return (long) (EvaluateSumRec(0, BigInteger.Max(bigIntN, bigIntM), BigInteger.Min(bigIntN, bigIntM) ) % mod);
 
-            ulong EvaluateSumRec(ulong init, ulong x, ulong y)
+            BigInteger EvaluateSumRec(BigInteger init, BigInteger x, BigInteger y)
             {
                 if (x == 0 || y == 0)
                     return 0;
 
-                var xPow2 = Pow2((int) Math.Log2(x));
-                var yPow2 = Pow2((int) Math.Log2(y));
+                var xPow2 = BigInteger.Pow(2, (int) BigInteger.Log(x, 2));
+                var yPow2 = BigInteger.Pow(2, (int) BigInteger.Log(y, 2));
 
-                ulong newX;
-                ulong newY;
-                ulong newInit;
-                ulong ans;
+                BigInteger newX;
+                BigInteger newY;
+                BigInteger newInit;
+                BigInteger ans;
 
                 if (xPow2 == yPow2)
                 {
@@ -39,7 +41,7 @@ namespace Experiments
                     newInit = init;
 
                     var sumInRow = SumRange(init + xPow2, xPow2, deduction, mod);
-                    ans = SumRange(init, xPow2, deduction, mod) * xPow2 + sumInRow * newX + sumInRow * newY;
+                    ans = SumRange(init, xPow2, deduction, mod) * xPow2 + sumInRow * newX + sumInRow * newY;    
                 }
                 else
                 {
@@ -50,17 +52,15 @@ namespace Experiments
                     ans = SumRange(init, xPow2, deduction, mod) * y;
                 }
 
-                return (ans % mod + EvaluateSumRec(
+                return ans % mod + EvaluateSumRec(
                     newInit,
-                    Math.Max(newX, newY),
-                    Math.Min(newX, newY))) % mod;
+                    BigInteger.Max(newX, newY),
+                    BigInteger.Min(newX, newY));
             }
 
-            [DebuggerStepThrough]
-            static ulong Pow2(int pow) => (ulong) 1 << pow;
         }
 
-        public static ulong SumRange(ulong numFrom, ulong count, ulong deduction, ulong mod)
+        public static BigInteger SumRange(BigInteger numFrom, BigInteger count, long deduction, long mod)
         {
             if (numFrom >= deduction)
                 numFrom -= deduction;
