@@ -1,6 +1,7 @@
 ﻿#define MYTEST
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -76,18 +77,19 @@ namespace Experiments
 
     public class Evaluate
     {
-        public readonly List<(string regexp, Func<Match, Token> createToken)> RegexpToToken = new()
-        {
-            ( /*language=regexp*/ @"\d+(\.?\d+)?([eE]-?\d+)?", Num.Create),
-            ( /*language=regexp*/ "[A-Za-z]+", Func.Create),
-            ( /*language=regexp*/ @"\(", Paren.Create(ParenType.Left)),
-            ( /*language=regexp*/ @"\)", Paren.Create(ParenType.Right)),
-            ( /*language=regexp*/ "-", Operation.Create(OpType.Minus)),
-            ( /*language=regexp*/ @"\+", Operation.Create(OpType.Plus)),
-            ( /*language=regexp*/ @"\*", Operation.Create(OpType.Mult)),
-            ( /*language=regexp*/ "/", Operation.Create(OpType.Div)),
-            ( /*language=regexp*/ "&", Operation.Create(OpType.Pow)),
-            ( /*language=regexp*/ @"\s+", Space.Create),
+        public readonly List<(string regexp, Func<Match, Token> createToken)> RegexpToToken =
+            new List<(string regexp, Func<Match, Token> createToken)>()
+            {
+                ( /*language=regexp*/ @"\d+(\.?\d+)?([eE]-?\d+)?", Num.Create),
+                ( /*language=regexp*/ "[A-Za-z]+", Func.Create),
+                ( /*language=regexp*/ @"\(", Paren.Create(ParenType.Left)),
+                ( /*language=regexp*/ @"\)", Paren.Create(ParenType.Right)),
+                ( /*language=regexp*/ "-", Operation.Create(OpType.Minus)),
+                ( /*language=regexp*/ @"\+", Operation.Create(OpType.Plus)),
+                ( /*language=regexp*/ @"\*", Operation.Create(OpType.Mult)),
+                ( /*language=regexp*/ "/", Operation.Create(OpType.Div)),
+                ( /*language=regexp*/ "&", Operation.Create(OpType.Pow)),
+                ( /*language=regexp*/ @"\s+", Space.Create),
         };
 
         // https://docs.microsoft.com/en-us/dotnet/standard/base-types/regular-expression-options
@@ -97,7 +99,7 @@ namespace Experiments
             RegexpToToken.SelectMany(tuple => Regex.Matches(expr, tuple.regexp).Select(tuple.createToken))
                          .OrderBy(token => token.Index)
                          .ThenByDescending(token => token.Lenght)
-                         .FilterAndValidate() // TODO: string expr pass as arg here
+                         .FilterAndValidate() // TODO: string expr pass as arg here for better exception experience
                          .Where(token => !(token is Space));
 
         public void Print(string expr) => Console.WriteLine(EvalRec(Scan(expr).GetEnumerator()));
@@ -128,50 +130,43 @@ namespace Experiments
 
             var token = enumerator.Current;
 
-            // TODO: refactor as alternation of: number/grouping/function creation <-> operation creation
-            switch (token)
+            var nextExp = token switch
             {
-                case Num:
-                    var number = new Number(token.Value);
+                Num _ => new Number(token.Value),
+                Operation { Type: OpType.Minus } => new Unary(EvalRec(enumerator)), // TODO: prlly coalesce with functions
+                var binary when binary is Func
+                                || binary is Paren { Type: ParenType.Left } => CreateBinary(),
+                _ => throw  new InvalidTokenException(token),
+            };
 
-                    return CreateOp(number);
-                case Operation { Type: OpType.Minus }: // TODO: prlly coalesce with functions
-                    return new Unary(EvalRec(enumerator));
-                case Func:
-                case Paren { Type: ParenType.Left}:
-                    string func = token is Func
-                        ? enumerator.MoveNext()
-                            ? token.Value
-                            : throw new InvalidTokenException(token)
-                        : ""; // TODO: add minus, prlly use switch
+            if (!enumerator.MoveNext() || enumerator.Current is Paren { Type: ParenType.Right})
+                return nextExp;
 
-                    if (!(enumerator.Current is Paren { Type: ParenType.Left }))
-                        throw new InvalidTokenException(enumerator.Current);
+            if (!(enumerator.Current is Operation operation))
+                throw new InvalidTokenException(enumerator.Current);
 
-                    var grouping = new Grouping(EvalRec(enumerator), func);
+            var expr = operation.HasHigherPriorityThen(prevOp)
+                ? nextExp
+                : new Binary(prevExpr, prevOp, nextExp);
 
-                    return CreateOp(grouping);
-                case Paren { Type: ParenType.Right}:
-                    return prevExpr;
-                default:
-                    throw new InvalidTokenException(token);
-            }
+            var nextExpr = EvalRec(enumerator, expr, operation);
 
-            Expr CreateOp(Expr? ex)
+            return new Binary(expr, operation, nextExpr);
+
+            Expr CreateBinary()
             {
-                if (!enumerator.MoveNext() || enumerator.Current is Paren { Type: ParenType.Right})
-                    return ex;
-
-                if (!(enumerator.Current is Operation operation))
+                string func = token is Func
+                    ? enumerator.MoveNext()
+                        ? token.Value
+                        : throw new InvalidTokenException(token)
+                    : ""; // TODO: add minus, prlly use switch
+                
+                if (!(enumerator.Current is Paren { Type: ParenType.Left }))
                     throw new InvalidTokenException(enumerator.Current);
-
-                var expr = operation.HasHigherPriorityThen(prevOp)
-                    ? ex
-                    : new Binary(prevExpr, prevOp, ex);
-
-                var nextExpr = EvalRec(enumerator, expr, operation);
-
-                return new Binary(expr, operation, nextExpr);
+                
+                var grouping = new Grouping(EvalRec(enumerator), func);
+                
+                return grouping;
             }
         }
     }
@@ -205,23 +200,24 @@ namespace Experiments
 
     public class Grouping : NTExpr
     {
-        private static readonly Dictionary<string, Func<double, double>> Funcs = new(StringComparer.OrdinalIgnoreCase)
-        {
-            { "sin", Math.Sin },
-            { "sinh", Math.Sinh },
-            { "asin", Math.Asin },
-            { "cos", Math.Cos },
-            { "cosh", Math.Cosh },
-            { "acos", Math.Acos },
-            { "tanh", Math.Tanh },
-            { "tan", Math.Tan },
-            { "atan", Math.Atan },
-            { "exp", Math.Exp },
-            { "ln", Math.Log },
-            { "log", Math.Log10 },
-            { "sqrt", Math.Sqrt },
-            { "abs", Math.Abs },
-        };
+        private static readonly Dictionary<string, Func<double, double>> Funcs =
+            new Dictionary<string, Func<double, double>>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "sin", Math.Sin },
+                { "sinh", Math.Sinh },
+                { "asin", Math.Asin },
+                { "cos", Math.Cos },
+                { "cosh", Math.Cosh },
+                { "acos", Math.Acos },
+                { "tanh", Math.Tanh },
+                { "tan", Math.Tan },
+                { "atan", Math.Atan },
+                { "exp", Math.Exp },
+                { "ln", Math.Log },
+                { "log", Math.Log10 },
+                { "sqrt", Math.Sqrt },
+                { "abs", Math.Abs },
+            };
 
         public Grouping(Expr arg, string func = default) : base(arg)
         {
@@ -255,14 +251,15 @@ namespace Experiments
 
     public class Binary : NTExpr
     {
-        private static readonly Dictionary<OpType, Func<double, double, double>> BinaryOps = new()
-        {
-            { OpType.Plus, (x, y) => x + y },
-            { OpType.Minus, (x, y) => x - y },
-            { OpType.Mult, (x, y) => x * y },
-            { OpType.Div, (x, y) => x / y },
-            { OpType.Pow, Math.Pow },
-        };
+        private static readonly Dictionary<OpType, Func<double, double, double>> BinaryOps =
+            new Dictionary<OpType, Func<double, double, double>>()
+            {
+                { OpType.Plus, (x, y) => x + y },
+                { OpType.Minus, (x, y) => x - y },
+                { OpType.Mult, (x, y) => x * y },
+                { OpType.Div, (x, y) => x / y },
+                { OpType.Pow, Math.Pow },
+            };
 
         public Binary(Expr arg, Operation op, Expr arg2) : base(arg)
         {
