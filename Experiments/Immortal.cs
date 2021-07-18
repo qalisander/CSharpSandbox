@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Numerics;
-using BenchmarkDotNet.Validators;
 
 namespace Experiments
 {
@@ -57,19 +55,16 @@ namespace Experiments
                     BigInteger.Max(newX, newY),
                     BigInteger.Min(newX, newY));
             }
-
         }
 
         public static BigInteger SumRange(BigInteger numFrom, BigInteger count, long deduction, long mod)
         {
-            if (numFrom >= deduction)
-                numFrom -= deduction;
-            else
-            {
-                count -= deduction - numFrom;
-                numFrom = 0;
-            }
-
+            numFrom -= deduction;
+            count = numFrom < 0 ? count + numFrom : count;
+            
+            numFrom = numFrom < 0 ? 0 : numFrom;
+            count = count < 0 ? 0 : count;
+            
             return count * (numFrom * 2 + count - 1) / 2 % mod;
         }
     }
