@@ -1,9 +1,9 @@
 ﻿using System.Diagnostics;
-using Experiments;
+using Experiments.Completed;
 using FluentAssertions;
 using NUnit.Framework;
 
-namespace NTests
+namespace NTests.Completed
 {
     [TestFixture]
     public class ImmortalTest
