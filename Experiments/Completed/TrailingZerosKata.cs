@@ -62,7 +62,7 @@ namespace Experiments.Completed
 
             return ans;
 
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            // [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int CountFives(int num)
             {
                 int ans = 0;
@@ -95,7 +95,7 @@ namespace Experiments.Completed
         {
             return Enumerable.Range(1, n).Sum(CountFives);
 
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            // [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int CountFives(int num)
             {
                 int ans = 0;

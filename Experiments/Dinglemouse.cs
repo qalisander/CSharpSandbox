@@ -27,9 +27,9 @@ namespace Experiments.Completed
         public class Track
         {
             public int Length { get; set; }
-            public Train TrainA { get; } = new ();
-            public Train TrainB { get; } = new ();
-            public List<int> StationPositions { get; } = new(); //TODO: to hashset
+            public Train TrainA { get; } = new Train();
+            public Train TrainB { get; } = new Train();
+            public List<int> StationPositions { get; } = new List<int>(); //TODO: to hashset
 
             public class Train
             {
@@ -95,7 +95,7 @@ namespace Experiments.Completed
             private char CurrentChar => GetChar(Current);
             private char PreviousChar => GetChar(Previous);
 
-            private Track Track { get; } = new();
+            private Track Track { get; } = new Track();
 
             public TrackBuilder(string track, string aTrain, string bTrain)
             {
