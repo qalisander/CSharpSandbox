@@ -1,6 +1,7 @@
 ﻿#define MYTEST
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -44,8 +45,7 @@ namespace Experiments
     {
         private Paren(ParenType parenType, Match match) : base(match) => Type = parenType;
         public ParenType Type { get; }
-        public static Func<Match, Paren> Create(ParenType type) =>
-            match => new Paren(type, match);
+        public static Func<Match, Paren> Create(ParenType type) => match => new Paren(type, match);
     }
     
     internal class Num : Token
@@ -65,13 +65,14 @@ namespace Experiments
         private Operation(OpType type, Match match) : base(match) => Type = type;
         public OpType Type { get; }
 
-        public bool HasHigherPriorityThen(Operation prevOp) =>
+        public bool HasHigherPriorityThen(Operation? prevOp) =>
             Type == OpType.Pow
             || prevOp is null //TODO: prlly remove
             || (int) Type / 10 > (int) prevOp.Type / 10;
 
-        public static Func<Match, Token> Create(OpType type) =>
-            match => new Operation(type, match);
+        public int Priority => (int) Type / 10;
+
+        public static Func<Match, Token> Create(OpType type) => match => new Operation(type, match);
     }
 
     public class Evaluate
@@ -103,12 +104,16 @@ namespace Experiments
 
         public void Print(string expr) => Console.WriteLine(EvalRec(Scan(expr).GetEnumerator()));
 
-        public string Eval(string expr)
+        public string? Eval(string expr)
         {
             try
             {
-                return EvalRec(Scan(expr).GetEnumerator())?.Eval().ToString()
-                       ?? throw new InvalidOperationException("Empty equation");
+                return EvalRec(Scan(expr).GetEnumerator())?.Eval() switch
+                {
+                    null => throw new InvalidOperationException("Empty equation"),
+                    var dbl when !double.IsFinite(dbl.Value) => throw new InvalidOperationException("Is infinite"),
+                    var eval => eval.ToString(),
+                };
             }
             catch (Exception)
             {
@@ -121,59 +126,74 @@ namespace Experiments
 
         private Expr EvalRec(
             IEnumerator<Token> enumerator,
-            Expr prevExpr = null,
-            Operation prevOp = null) //previous unaccomplished operation
+            Expr? prevExpr = null,
+            Operation? prevOp = null) //previous unaccomplished operation
         {
             if (!enumerator.MoveNext())
-                return prevExpr;
+                return prevExpr ?? throw new InvalidOperationException("Invalid ending");
 
-            var token = enumerator.Current;
-
-            // TODO: refactor as alternation of: number/grouping/function creation <-> operation creation
-            switch (token)
+            Token? prevToken = null;
+            if (enumerator.Current is Func || enumerator.Current is Operation { Type: OpType.Minus })
             {
-                case Num _:
-                    var number = new Number(token.Value);
-
-                    return CreateOp(number);
-                case Operation { Type: OpType.Minus }: // TODO: prlly coalesce with functions
-                    return new Unary(EvalRec(enumerator));
-                case Func _:
-                case Paren { Type: ParenType.Left}:
-                    string func = token is Func
-                        ? enumerator.MoveNext()
-                            ? token.Value
-                            : throw new InvalidTokenException(token)
-                        : ""; // TODO: add minus, prlly use switch
-
-                    if (!(enumerator.Current is Paren { Type: ParenType.Left }))
-                        throw new InvalidTokenException(enumerator.Current);
-
-                    var grouping = new Grouping(EvalRec(enumerator), func);
-
-                    return CreateOp(grouping);
-                case Paren { Type: ParenType.Right}:
-                    return prevExpr;
-                default:
-                    throw new InvalidTokenException(token);
+                prevToken = enumerator.Current;
+                
+                if (!enumerator.MoveNext())
+                    throw new InvalidTokenException(prevToken);
             }
 
-            Expr CreateOp(Expr? ex)
+            Token token = enumerator.Current;
+            Expr expr = token switch
             {
-                if (!enumerator.MoveNext() || enumerator.Current is Paren { Type: ParenType.Right})
-                    return ex;
+                Paren { Type: ParenType.Left } => prevToken switch
+                {
+                    Func func => new Grouping(EvalRec(enumerator), func.Value),
+                    Operation { Type: OpType.Minus } => new Grouping(EvalRec(enumerator), "-"),
+                    null => new Grouping(EvalRec(enumerator)),
+                    _ => throw new InvalidTokenException(token),
+                },
+                Num num when prevToken is Operation { Type: OpType.Minus } => new Grouping(new Number(num.Value), "-"),
+                Num num => new Number(num.Value),
+                Operation { Type: OpType.Minus } when prevToken is Operation { Type: OpType.Minus } =>
+                    EvalRec(enumerator, prevExpr, prevOp),
+                _ => throw new InvalidTokenException(token),
+            };
 
-                if (!(enumerator.Current is Operation operation))
-                    throw new InvalidTokenException(enumerator.Current);
+            var nextToken = enumerator.Current;
+            if (token is Paren { Type: ParenType.Left } && !(nextToken is Paren { Type: ParenType.Right }))
+                throw new InvalidTokenException(enumerator.Current);
 
-                var expr = operation.HasHigherPriorityThen(prevOp)
-                    ? ex
-                    : new Binary(prevExpr, prevOp, ex);
+            if (!enumerator.MoveNext() || enumerator.Current is Paren { Type: ParenType.Right})
+                return expr;
 
+            if (!(enumerator.Current is Operation operation))
+                throw new InvalidTokenException(enumerator.Current);
+
+            if (operation.HasHigherPriorityThen(prevOp))
+            {
                 var nextExpr = EvalRec(enumerator, expr, operation);
+                
+                if (enumerator.Current is Operation nextOperation)
+                {
 
+                    if (prevOp is null)
+                    {
+                        var tempExpr = new Binary(expr, operation, nextExpr);
+
+                        return new Binary(tempExpr, nextOperation, EvalRec(enumerator, nextExpr, nextOperation));
+                    }
+                    
+                    if (prevOp?.Priority <= nextOperation.Priority)
+                    {
+                        var tempExpr = new Binary(nextExpr, nextOperation, EvalRec(enumerator, nextExpr, nextOperation));
+                        
+                        return new Binary(expr, operation, tempExpr);
+                    }
+                }
+                
                 return new Binary(expr, operation, nextExpr);
             }
+
+            return expr;
         }
     }
 
@@ -184,10 +204,8 @@ namespace Experiments
 
     public class Number : Expr
     {
-        public Number(string number)
-        {
+        public Number(string number) => 
             Value = double.Parse(number.AsSpan(), NumberStyles.AllowExponent | NumberStyles.AllowDecimalPoint);
-        }
 
         private double Value { get; }
 
@@ -197,10 +215,7 @@ namespace Experiments
 
     public abstract class NTExpr : Expr
     {
-        protected NTExpr(Expr arg)
-        {
-            Arg = arg;
-        }
+        protected NTExpr(Expr arg) => Arg = arg;
         protected Expr Arg { get; }
     }
 
@@ -225,13 +240,16 @@ namespace Experiments
                 { "abs", Math.Abs },
             };
 
-        public Grouping(Expr arg, string func = default) : base(arg)
+        public Grouping(Expr arg, string func = "") : base(arg)
         {
             FunctionStr = func;
 
-            Function = string.IsNullOrEmpty(func)
-                ? x => x
-                : Funcs[func];
+            Function = func switch
+            {
+                "" => x => x,
+                "-" => x => -x,
+                _ => Funcs[func],
+            };
         }
         private Func<double, double> Function { get; }
         private string FunctionStr { get; }
@@ -311,5 +329,6 @@ namespace Experiments
         public InvalidTokenException(Token token) : base($"Invalid token: {token}") { }
 
         //TODO: Invalid string between tokens exception, token has context of string
+        // TODO: Use simple throw method instead of exception
     }
 }
