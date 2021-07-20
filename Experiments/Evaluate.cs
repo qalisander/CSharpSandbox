@@ -6,6 +6,9 @@ using System.Text.RegularExpressions;
 
 // https://www.codewars.com/kata/564d9ebde30917684f000048/train/csharp
 // Lexer examples https://github.com/mauriciomoccelin/compiler
+// https://docs.microsoft.com/en-us/dotnet/standard/base-types/regular-expression-options
+// https://en.wikipedia.org/wiki/Lexical_grammar
+// https://en.wikipedia.org/wiki/Lexical_analysis
 namespace Experiments
 {
     public enum ParenType
@@ -91,10 +94,7 @@ namespace Experiments
                 ( /*language=regexp*/ "&", Operation.Create(OpType.Pow)),
                 ( /*language=regexp*/ @"\s+", Space.Create),
             };
-
-        // https://docs.microsoft.com/en-us/dotnet/standard/base-types/regular-expression-options
-        // https://en.wikipedia.org/wiki/Lexical_grammar
-        // https://en.wikipedia.org/wiki/Lexical_analysis
+        
         public IEnumerable<Token> Scan(string expr) =>
             RegexpToToken.SelectMany(pair => Regex.Matches(expr, pair.regexp).Select(pair.createToken))
                          .OrderBy(token => token.Index)
@@ -237,21 +237,17 @@ namespace Experiments
                 { "abs", Math.Abs },
             };
 
-        public Unary(Expr arg, string func = "") : base(arg)
-        {
-            FunctionStr = func;
-
-            Function = func switch
-            {
-                "" => x => x,
-                "-" => x => -x,
-                _ => Funcs[func],
-            };
-        }
-        private Func<double, double> Function { get; }
+        public Unary(Expr arg, string func = "") : base(arg) => FunctionStr = func;
+        
         private string FunctionStr { get; }
         
-        public override double Eval() => Function(Arg.Eval()); //TODO: use get function method
+        public override double Eval() => Calculate(Arg.Eval());
+        private double Calculate(double num) => FunctionStr switch
+        {
+            "" => num,
+            "-" => -num,
+            _ => Funcs[FunctionStr](num),
+        };
         public static bool IsFuncExist(string func) => Funcs.ContainsKey(func);
         public override string ToString() => $" {FunctionStr}( {Arg} )";
     }
@@ -278,8 +274,8 @@ namespace Experiments
         private Expr Arg2 { get; }
         private string OpStr { get; }
         private Func<double, double, double> Function { get; }
+        
         public override double Eval() => Function(Arg.Eval(), Arg2.Eval());
-
         public override string ToString() => $"[ {Arg} {OpStr} {Arg2} ]";
     }
 
