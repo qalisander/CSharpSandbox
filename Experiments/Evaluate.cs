@@ -1,7 +1,5 @@
-﻿#define MYTEST
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -15,7 +13,7 @@ namespace Experiments
         Left,
         Right,
     }
-    
+
     public enum OpType
     {
         //NOTE: first digit - priority
@@ -31,23 +29,25 @@ namespace Experiments
         protected Token(Match match) => (Value, Index) = (match.Value, match.Index);
         public string Value { get; }
         public int Index { get; }
+        public string? InitialStr { get; set; }
         public int Lenght => Value.Length;
+        public int LastIndex => Index + Lenght;
         public override string ToString() => $"<{GetType().Name} id[{Index}] '{Value}'>";
     }
-    
+
     internal class Space : Token
     {
         private Space(Match match) : base(match) { }
         public static Space Create(Match match) => new Space(match);
     }
-    
+
     internal class Paren : Token
     {
         private Paren(ParenType parenType, Match match) : base(match) => Type = parenType;
         public ParenType Type { get; }
         public static Func<Match, Paren> Create(ParenType type) => match => new Paren(type, match);
     }
-    
+
     internal class Num : Token
     {
         private Num(Match match) : base(match) { }
@@ -65,12 +65,12 @@ namespace Experiments
         private Operation(OpType type, Match match) : base(match) => Type = type;
         public OpType Type { get; }
 
+        public int Priority => (int) Type / 10;
+
         public bool HasHigherPriorityThen(Operation? prevOp) =>
             Type == OpType.Pow
             || prevOp is null //TODO: prlly remove
             || (int) Type / 10 > (int) prevOp.Type / 10;
-
-        public int Priority => (int) Type / 10;
 
         public static Func<Match, Token> Create(OpType type) => match => new Operation(type, match);
     }
@@ -78,7 +78,7 @@ namespace Experiments
     public class Evaluate
     {
         public readonly List<(string regexp, Func<Match, Token> createToken)> RegexpToToken =
-            new List<(string regexp, Func<Match, Token> createToken)>()
+            new List<(string regexp, Func<Match, Token> createToken)>
             {
                 ( /*language=regexp*/ @"\d+(\.?\d+)?([eE]-?\d+)?", Num.Create),
                 ( /*language=regexp*/ "[A-Za-z]+", Func.Create),
@@ -96,10 +96,10 @@ namespace Experiments
         // https://en.wikipedia.org/wiki/Lexical_grammar
         // https://en.wikipedia.org/wiki/Lexical_analysis
         public IEnumerable<Token> Scan(string expr) =>
-            RegexpToToken.SelectMany(tuple => Regex.Matches(expr, tuple.regexp).Select(tuple.createToken))
+            RegexpToToken.SelectMany(pair => Regex.Matches(expr, pair.regexp).Select(pair.createToken))
                          .OrderBy(token => token.Index)
                          .ThenByDescending(token => token.Lenght)
-                         .FilterAndValidate() // TODO: string expr pass as arg here
+                         .ProcessTokens(expr)
                          .Where(token => !(token is Space));
 
         public void Print(string expr) => Console.WriteLine(EvalRec(Scan(expr).GetEnumerator()));
@@ -117,9 +117,7 @@ namespace Experiments
             }
             catch (Exception)
             {
-#if MYTEST
-                throw;
-#endif
+                // throw;
                 return "ERROR";
             }
         }
@@ -127,16 +125,16 @@ namespace Experiments
         private Expr EvalRec(
             IEnumerator<Token> enumerator,
             Expr? prevExpr = null,
-            Operation? prevOp = null) //previous unaccomplished operation
+            Operation? prevOp = null)
         {
             if (!enumerator.MoveNext())
-                return prevExpr ?? throw new InvalidOperationException("Invalid ending");
+                return prevExpr ?? throw new InvalidTokenException();
 
             Token? prevToken = null;
             if (enumerator.Current is Func || enumerator.Current is Operation { Type: OpType.Minus })
             {
                 prevToken = enumerator.Current;
-                
+
                 if (!enumerator.MoveNext())
                     throw new InvalidTokenException(prevToken);
             }
@@ -146,12 +144,12 @@ namespace Experiments
             {
                 Paren { Type: ParenType.Left } => prevToken switch
                 {
-                    Func func => new Grouping(EvalRec(enumerator), func.Value),
-                    Operation { Type: OpType.Minus } => new Grouping(EvalRec(enumerator), "-"),
-                    null => new Grouping(EvalRec(enumerator)),
+                    Func func => new Unary(EvalRec(enumerator), func.Value),
+                    Operation { Type: OpType.Minus } => new Unary(EvalRec(enumerator), "-"),
+                    null => new Unary(EvalRec(enumerator)),
                     _ => throw new InvalidTokenException(token),
                 },
-                Num num when prevToken is Operation { Type: OpType.Minus } => new Grouping(new Number(num.Value), "-"),
+                Num num when prevToken is Operation { Type: OpType.Minus } => new Unary(new Number(num.Value), "-"),
                 Num num => new Number(num.Value),
                 Operation { Type: OpType.Minus } when prevToken is Operation { Type: OpType.Minus } =>
                     EvalRec(enumerator, prevExpr, prevOp),
@@ -162,7 +160,7 @@ namespace Experiments
             if (token is Paren { Type: ParenType.Left } && !(nextToken is Paren { Type: ParenType.Right }))
                 throw new InvalidTokenException(enumerator.Current);
 
-            if (!enumerator.MoveNext() || enumerator.Current is Paren { Type: ParenType.Right})
+            if (!enumerator.MoveNext() || enumerator.Current is Paren { Type: ParenType.Right })
                 return expr;
 
             if (!(enumerator.Current is Operation operation))
@@ -171,7 +169,7 @@ namespace Experiments
             if (operation.HasHigherPriorityThen(prevOp))
             {
                 var nextExpr = EvalRec(enumerator, expr, operation);
-                
+
                 if (enumerator.Current is Operation nextOperation)
                 {
 
@@ -181,7 +179,7 @@ namespace Experiments
 
                         return new Binary(tempExpr, nextOperation, EvalRec(enumerator, nextExpr, nextOperation));
                     }
-                    
+
                     if (prevOp?.Priority <= nextOperation.Priority)
                     {
                         var tempExpr = new Binary(nextExpr, nextOperation, EvalRec(enumerator, nextExpr, nextOperation));
@@ -189,7 +187,7 @@ namespace Experiments
                         return new Binary(expr, operation, tempExpr);
                     }
                 }
-                
+
                 return new Binary(expr, operation, nextExpr);
             }
 
@@ -208,7 +206,6 @@ namespace Experiments
             Value = double.Parse(number.AsSpan(), NumberStyles.AllowExponent | NumberStyles.AllowDecimalPoint);
 
         private double Value { get; }
-
         public override double Eval() => Value;
         public override string ToString() => Value.ToString();
     }
@@ -219,7 +216,7 @@ namespace Experiments
         protected Expr Arg { get; }
     }
 
-    public class Grouping : NTExpr
+    public class Unary : NTExpr
     {
         private static readonly Dictionary<string, Func<double, double>> Funcs =
             new Dictionary<string, Func<double, double>>(StringComparer.OrdinalIgnoreCase)
@@ -240,7 +237,7 @@ namespace Experiments
                 { "abs", Math.Abs },
             };
 
-        public Grouping(Expr arg, string func = "") : base(arg)
+        public Unary(Expr arg, string func = "") : base(arg)
         {
             FunctionStr = func;
 
@@ -253,30 +250,16 @@ namespace Experiments
         }
         private Func<double, double> Function { get; }
         private string FunctionStr { get; }
-
-        public override double Eval() => Function(Arg.Eval());
-
+        
+        public override double Eval() => Function(Arg.Eval()); //TODO: use get function method
         public static bool IsFuncExist(string func) => Funcs.ContainsKey(func);
         public override string ToString() => $" {FunctionStr}( {Arg} )";
-    }
-
-    // TODO: merge unary and grouping
-    public class Unary : NTExpr
-    {
-        public Unary(Expr arg) : base(arg)
-        {
-            Function = x => -x;
-        }
-
-        private Func<double, double> Function { get; }
-        public override double Eval() => Function(Arg.Eval());
-        public override string ToString() => $"-{Arg}";
     }
 
     public class Binary : NTExpr
     {
         private static readonly Dictionary<OpType, Func<double, double, double>> BinaryOps =
-            new Dictionary<OpType, Func<double, double, double>>()
+            new Dictionary<OpType, Func<double, double, double>>
             {
                 { OpType.Plus, (x, y) => x + y },
                 { OpType.Minus, (x, y) => x - y },
@@ -302,21 +285,23 @@ namespace Experiments
 
     public static class Ext
     {
-        public static IEnumerable<Token> FilterAndValidate(this IEnumerable<Token> tokens)
+        public static IEnumerable<Token> ProcessTokens(this IEnumerable<Token> tokens, string initialString)
         {
-            Token prev = null;
+            Token? prev = null;
 
             foreach (var token in tokens)
             {
+                token.InitialStr = initialString;
+
                 var expectedIndex = prev?.Index + prev?.Lenght;
 
                 if (token.Index > expectedIndex)
-                    throw new InvalidTokenException(token);
+                    throw new InvalidTokenException(prev, token);
 
                 if (token.Index < expectedIndex)
                     continue;
 
-                if (token is Func && !Grouping.IsFuncExist(token.Value))
+                if (token is Func && !Unary.IsFuncExist(token.Value))
                     throw new InvalidTokenException(token);
 
                 yield return prev = token;
@@ -326,9 +311,17 @@ namespace Experiments
 
     public class InvalidTokenException : Exception
     {
-        public InvalidTokenException(Token token) : base($"Invalid token: {token}") { }
+        public InvalidTokenException() : base("Invalid expression's ending") { }
+        public InvalidTokenException(Token token) : base($"Invalid token: {token}\n{Highlight(token)}") { }
+        public InvalidTokenException(Token? token1, Token token2)
+            : base($"Invalid token!\n{HighlightBetween(token1, token2)}")
+        {
+        }
 
-        //TODO: Invalid string between tokens exception, token has context of string
-        // TODO: Use simple throw method instead of exception
+        private static string Highlight(Token token) => HighlightArea(token.InitialStr, token.Index, token.Lenght);
+        private static string HighlightBetween(Token? token1, Token token2) =>
+            HighlightArea(token2.InitialStr, token1?.LastIndex ?? 0, token2.Index - (token1?.LastIndex ?? 0));
+        private static string HighlightArea(string? expression, int index, int length) =>
+            expression + "\n" + (new string(' ', index) + new string('^', length)).PadRight(expression.Length);
     }
 }

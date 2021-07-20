@@ -25,6 +25,7 @@ namespace NTests
         [TestCase("abs(-(-1+(2*(4--3)))&2)", "169")]
         public void Eval_Test1(string expr, string expected)
         {
+            Console.WriteLine(expr);
             ev.Print(expr);
             ev.Eval(expr).Should().Be(expected);
         }
@@ -41,7 +42,7 @@ namespace NTests
         }
 
         [Test]
-        [TestCase("abs ( -- 1&6   %     ) * 2e423")]
+        [TestCase("abs ( -- 1&6   %#$     ) * 2e423")]
         [TestCase("a bs ( -- 1&6        ) * 2e423")]
         [TestCase("cos cosh cos h")]
         public void Eval_ScanTest_Fail(string equation)
