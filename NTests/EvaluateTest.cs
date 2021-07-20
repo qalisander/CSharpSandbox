@@ -14,74 +14,19 @@ namespace NTests
         private Evaluate ev = new Evaluate();
 
         [Test]
-        public void Eval_Test1()
+        [TestCase("2*3&2", "18")]
+        [TestCase("(2*3&2)", "18")]
+        [TestCase("-2*3&2 + 1", "-17")]
+        [TestCase("-2 + 2", "0")]
+        [TestCase("(-(2 + 3)* (1 + 2)) * 4 & 2", "-240")]
+        [TestCase("sqrt(-2)*2", "ERROR")]
+        [TestCase("2*5/0", "ERROR")]
+        [TestCase("-5&3&2*2-1", "-3906251")]
+        [TestCase("abs(-(-1+(2*(4--3)))&2)", "169")]
+        public void Eval_Test1(string expr, string expected)
         {
-            var expr = "2*3&2";
-            
             ev.Print(expr);
-            Assert.AreEqual("18", ev.Eval(expr));
-        }
-        
-        [Test]
-        public void Eval_Test1_Parenthesis()
-        {
-            var expr = "(2*3&2)";
-            
-            ev.Print(expr);
-            Assert.AreEqual("18", ev.Eval(expr));
-        }
-        
-        [Test]
-        public void Eval_Test1_Minus()
-        {
-            var expr = "-2*3&2 + 1";
-            
-            Console.WriteLine(expr + "\n");
-            ev.Print(expr);
-            Assert.AreEqual("-17", ev.Eval(expr));
-        }
-        
-        [Test]
-        public void Eval_Test1_Minus_2()
-        {
-            var expr = "-2 + 2";
-            
-            Console.WriteLine(expr + "\n");
-            ev.Print(expr);
-            Assert.AreEqual("0", ev.Eval(expr));
-        }
-
-        [Test]
-        public void Eval_Test2()
-        {
-            Assert.AreEqual("-240", ev.Eval("(-(2 + 3)* (1 + 2)) * 4 & 2"));
-        }
-    
-        [Test]
-        public void Eval_Test3()
-        {
-            Assert.AreEqual("ERROR", (ev.Eval("sqrt(-2)*2")+"     ").Substring(0,5).ToUpper());
-        }
-    
-        [Test]
-        public void Eval_Test4()
-        {
-            Assert.AreEqual("ERROR", (ev.Eval("2*5/0")+"     ").Substring(0,5).ToUpper());
-        }
-    
-        [Test]
-        public void Eval_Test5()
-        {
-            Assert.AreEqual("-3906251", ev.Eval("-5&3&2*2-1"));
-        }
-    
-        [Test]
-        public void Eval_Test6()
-        {
-            var expr = "abs(-(-1+(2*(4--3)))&2)";
-            
-            ev.Print(expr);
-            Assert.AreEqual("169", ev.Eval(expr));
+            ev.Eval(expr).Should().Be(expected);
         }
 
         [Test]
