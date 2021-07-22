@@ -130,13 +130,14 @@ namespace Experiments
             if (!enumerator.MoveNext())
                 return prevExpr ?? throw new InvalidTokenException();
 
+            // TODO: rename to functionToken
             Token? prevToken = null;
             if (enumerator.Current is Func || enumerator.Current is Operation { Type: OpType.Minus })
             {
                 prevToken = enumerator.Current;
 
                 if (!enumerator.MoveNext())
-                    throw new InvalidTokenException(prevToken);
+                    throw new InvalidTokenException();
             }
 
             Token token = enumerator.Current;
@@ -156,7 +157,7 @@ namespace Experiments
                 _ => throw new InvalidTokenException(token),
             };
 
-            var nextToken = enumerator.Current;
+            var nextToken = enumerator.Current; //TODO: right paren checking doesnt work
             if (token is Paren { Type: ParenType.Left } && !(nextToken is Paren { Type: ParenType.Right }))
                 throw new InvalidTokenException(enumerator.Current);
 
@@ -166,18 +167,18 @@ namespace Experiments
             if (!(enumerator.Current is Operation operation))
                 throw new InvalidTokenException(enumerator.Current);
 
+            // BUG: "-".HasHigherPriorityThen("*") == false => there is not processing "-"
             if (operation.HasHigherPriorityThen(prevOp))
             {
                 var nextExpr = EvalRec(enumerator, expr, operation);
 
                 if (enumerator.Current is Operation nextOperation)
                 {
-
                     if (prevOp is null)
                     {
                         var tempExpr = new Binary(expr, operation, nextExpr);
 
-                        return new Binary(tempExpr, nextOperation, EvalRec(enumerator, nextExpr, nextOperation));
+                        return new Binary(tempExpr, nextOperation, EvalRec(enumerator, tempExpr, nextOperation));
                     }
 
                     if (prevOp?.Priority <= nextOperation.Priority)
@@ -210,13 +211,13 @@ namespace Experiments
         public override string ToString() => Value.ToString();
     }
 
-    public abstract class NTExpr : Expr
+    public abstract class NtExpr : Expr
     {
-        protected NTExpr(Expr arg) => Arg = arg;
+        protected NtExpr(Expr arg) => Arg = arg;
         protected Expr Arg { get; }
     }
 
-    public class Unary : NTExpr
+    public class Unary : NtExpr
     {
         private static readonly Dictionary<string, Func<double, double>> Funcs =
             new Dictionary<string, Func<double, double>>(StringComparer.OrdinalIgnoreCase)
@@ -252,7 +253,7 @@ namespace Experiments
         public override string ToString() => $" {FunctionStr}( {Arg} )";
     }
 
-    public class Binary : NTExpr
+    public class Binary : NtExpr
     {
         private static readonly Dictionary<OpType, Func<double, double, double>> BinaryOps =
             new Dictionary<OpType, Func<double, double, double>>
@@ -314,10 +315,10 @@ namespace Experiments
         {
         }
 
-        private static string Highlight(Token token) => HighlightArea(token.InitialStr, token.Index, token.Lenght);
+        private static string Highlight(Token token) => HighlightArea(token.InitialStr ?? "", token.Index, token.Lenght);
         private static string HighlightBetween(Token? token1, Token token2) =>
-            HighlightArea(token2.InitialStr, token1?.LastIndex ?? 0, token2.Index - (token1?.LastIndex ?? 0));
-        private static string HighlightArea(string? expression, int index, int length) =>
+            HighlightArea(token2.InitialStr ?? "", token1?.LastIndex ?? 0, token2.Index - (token1?.LastIndex ?? 0));
+        private static string HighlightArea(string expression, int index, int length) =>
             expression + "\n" + (new string(' ', index) + new string('^', length)).PadRight(expression.Length);
     }
 }
