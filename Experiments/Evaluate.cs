@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -121,79 +122,150 @@ namespace Experiments
                 return "ERROR";
             }
         }
-
-        private Expr EvalRec(
-            IEnumerator<Token> enumerator,
-            Expr? prevExpr = null,
-            Operation? prevOp = null)
+        
+        // expression     → term ;
+        // term           → factor ( ( "-" | "+" ) factor )* ;
+        // factor         → unary ( ( "/" | "*" ) unary )* ;
+        // unary          → "-" unary | pow ;
+        // pow            → primary "&" pow | primary;
+        // primary        → func? "(" expression ")" | number;
+        private Expr CreateExpr(IEnumerator<Token> enumerator)
         {
+            Token? previous = default;
+
             if (!enumerator.MoveNext())
-                return prevExpr ?? throw new InvalidTokenException();
+                throw new InvalidTokenException();
 
-            // TODO: rename to functionToken
-            Token? prevToken = null;
-            if (enumerator.Current is Func || enumerator.Current is Operation { Type: OpType.Minus })
+            Expr Term()
             {
-                prevToken = enumerator.Current;
+                throw new NotImplementedException();
+            }
 
+            Expr Factor()
+            {
+                throw new NotImplementedException();
+            }
+
+            Expr Unary()
+            {
+                throw new NotImplementedException();
+            }
+
+            Expr Pow()
+            {
+                var expr = Primary();
+
+                return enumerator.MoveNext() && enumerator.Current is Operation { Type: OpType.Pow } op
+                    ? new Binary(expr, op, Pow())
+                    : expr;
+            }
+
+            Expr Primary()
+            {
+                string funcStr = enumerator.Current switch
+                {
+                    Func func when enumerator.MoveNext() => func.Value,
+                    Paren _ => "",
+                    { } token => throw new InvalidTokenException(token),
+                };
+
+                return enumerator.Current switch
+                {
+                    Paren { Type: ParenType.Left } when enumerator.MoveNext() => Term() switch
+                    {
+                        var term when enumerator.Current is Paren { Type: ParenType.Right} => 
+                            new Unary(term, funcStr),
+                        _ => throw new InvalidTokenException(enumerator.Current),
+                    },
+                    Num num => new Number(num.Value),
+                    _ => throw new InvalidTokenException(enumerator.Current),
+                };;
+            }
+
+            bool TryGetNext(out Token? token)
+            {
+                token = default;
                 if (!enumerator.MoveNext())
-                    throw new InvalidTokenException();
+                    return false;
+
+                token = previous = enumerator.Current;
+                return true;
             }
-
-            Token token = enumerator.Current;
-            Expr expr = token switch
-            {
-                Paren { Type: ParenType.Left } => prevToken switch
-                {
-                    Func func => new Unary(EvalRec(enumerator), func.Value),
-                    Operation { Type: OpType.Minus } => new Unary(EvalRec(enumerator), "-"),
-                    null => new Unary(EvalRec(enumerator)),
-                    _ => throw new InvalidTokenException(token),
-                },
-                Num num when prevToken is Operation { Type: OpType.Minus } => new Unary(new Number(num.Value), "-"),
-                Num num => new Number(num.Value),
-                Operation { Type: OpType.Minus } when prevToken is Operation { Type: OpType.Minus } =>
-                    EvalRec(enumerator, prevExpr, prevOp),
-                _ => throw new InvalidTokenException(token),
-            };
-
-            var nextToken = enumerator.Current; //TODO: right paren checking doesnt work
-            if (token is Paren { Type: ParenType.Left } && !(nextToken is Paren { Type: ParenType.Right }))
-                throw new InvalidTokenException(enumerator.Current);
-
-            if (!enumerator.MoveNext() || enumerator.Current is Paren { Type: ParenType.Right })
-                return expr;
-
-            if (!(enumerator.Current is Operation operation))
-                throw new InvalidTokenException(enumerator.Current);
-
-            // BUG: "-".HasHigherPriorityThen("*") == false => there is not processing "-"
-            if (operation.HasHigherPriorityThen(prevOp))
-            {
-                var nextExpr = EvalRec(enumerator, expr, operation);
-
-                if (enumerator.Current is Operation nextOperation)
-                {
-                    if (prevOp is null)
-                    {
-                        var tempExpr = new Binary(expr, operation, nextExpr);
-
-                        return new Binary(tempExpr, nextOperation, EvalRec(enumerator, tempExpr, nextOperation));
-                    }
-
-                    if (prevOp?.Priority <= nextOperation.Priority)
-                    {
-                        var tempExpr = new Binary(nextExpr, nextOperation, EvalRec(enumerator, nextExpr, nextOperation));
-                        
-                        return new Binary(expr, operation, tempExpr);
-                    }
-                }
-
-                return new Binary(expr, operation, nextExpr);
-            }
-
-            return expr;
         }
+        
+
+        // private Expr EvalRec(
+        //     IEnumerator<Token> enumerator,
+        //     Expr? prevExpr = null,
+        //     Operation? prevOp = null)
+        // {
+        //     if (!enumerator.MoveNext())
+        //         return prevExpr ?? throw new InvalidTokenException();
+        //
+        //     // TODO: rename to functionToken
+        //     Token? prevToken = null;
+        //     if (enumerator.Current is Func || enumerator.Current is Operation { Type: OpType.Minus })
+        //     {
+        //         prevToken = enumerator.Current;
+        //
+        //         if (!enumerator.MoveNext())
+        //             throw new InvalidTokenException();
+        //     }
+        //
+        //     Token token = enumerator.Current;
+        //     Expr expr = token switch
+        //     {
+        //         Paren { Type: ParenType.Left } => prevToken switch
+        //         {
+        //             Func func => new Unary(EvalRec(enumerator), func.Value),
+        //             Operation { Type: OpType.Minus } => new Unary(EvalRec(enumerator), "-"),
+        //             null => new Unary(EvalRec(enumerator)),
+        //             _ => throw new InvalidTokenException(token),
+        //         },
+        //         Num num when prevToken is Operation { Type: OpType.Minus } => new Unary(new Number(num.Value), "-"),
+        //         Num num => new Number(num.Value),
+        //         Operation { Type: OpType.Minus } when prevToken is Operation { Type: OpType.Minus } =>
+        //             EvalRec(enumerator, prevExpr, prevOp),
+        //         _ => throw new InvalidTokenException(token),
+        //     };
+        //
+        //     var nextToken = enumerator.Current; //TODO: right paren checking doesnt work
+        //     if (token is Paren { Type: ParenType.Left } && !(nextToken is Paren { Type: ParenType.Right }))
+        //         throw new InvalidTokenException(enumerator.Current);
+        //
+        //     if (!enumerator.MoveNext() || enumerator.Current is Paren { Type: ParenType.Right })
+        //         return expr;
+        //
+        //     if (!(enumerator.Current is Operation operation))
+        //         throw new InvalidTokenException(enumerator.Current);
+        //
+        //     // BUG: "-".HasHigherPriorityThen("*") == false => there is not processing "-"
+        //     if (operation.HasHigherPriorityThen(prevOp))
+        //     {
+        //         var nextExpr = EvalRec(enumerator, expr, operation);
+        //
+        //         if (enumerator.Current is Operation nextOperation)
+        //         {
+        //             if (prevOp is null)
+        //             {
+        //                 var tempExpr = new Binary(expr, operation, nextExpr);
+        //
+        //                 return new Binary(tempExpr, nextOperation, EvalRec(enumerator, tempExpr, nextOperation));
+        //             }
+        //
+        //             if (prevOp?.Priority <= nextOperation.Priority)
+        //             {
+        //                 var tempExpr = new Binary(nextExpr, nextOperation, EvalRec(enumerator, nextExpr, nextOperation));
+        //                 
+        //                 return new Binary(expr, operation, tempExpr);
+        //             }
+        //         }
+        //
+        //         return new Binary(expr, operation, nextExpr);
+        //     }
+        //
+        //     return expr;
+        // }
     }
 
     public abstract class Expr
