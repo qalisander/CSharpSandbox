@@ -34,9 +34,17 @@ namespace Experiments
         public string Value { get; }
         public int Index { get; }
         public string? InitialStr { get; set; }
-        public int Lenght => Value.Length;
-        public int LastIndex => Index + Lenght;
-        public override string ToString() => $"<{GetType().Name} id[{Index}] '{Value}'>";
+        public int Length => Value.Length;
+        public int LastIndex => Index + Length;
+        public override string ToString() => $"<{GetType().Name} id[{Index}] '{Value}'>\n{Highlight()}\n";
+        
+        public string Highlight() => string.IsNullOrEmpty(InitialStr)
+            ? ""
+            : HighlightArea(InitialStr, Index, Length);
+        public string HighlightAfter(Token? token) =>
+            HighlightArea(InitialStr ?? "", token?.LastIndex ?? 0, Index - (token?.LastIndex ?? 0));
+        private static string HighlightArea(string expression, int index, int length) =>
+            expression + "\n" + (new string(' ', index) + new string('^', length)).PadRight(expression.Length);
     }
 
     internal class Space : Token
@@ -69,8 +77,6 @@ namespace Experiments
         private Operation(OpType type, Match match) : base(match) => Type = type;
         public OpType Type { get; }
 
-        public int Priority => (int) Type / 10;
-
         public bool HasHigherPriorityThen(Operation? prevOp) =>
             Type == OpType.Pow
             || prevOp is null //TODO: prlly remove
@@ -99,7 +105,7 @@ namespace Experiments
         public IEnumerable<Token> Scan(string expr) =>
             RegexpToToken.SelectMany(pair => Regex.Matches(expr, pair.regexp).Select(pair.createToken))
                          .OrderBy(token => token.Index)
-                         .ThenByDescending(token => token.Lenght)
+                         .ThenByDescending(token => token.Length)
                          .ProcessTokens(expr)
                          .Where(token => !(token is Space));
 
@@ -111,12 +117,12 @@ namespace Experiments
             {
                 return CreateExpr(Scan(expr).GetEnumerator())?.Eval() switch
                 {
-                    null => throw new InvalidOperationException("Empty equation"),
-                    var dbl when !double.IsFinite(dbl.Value) => throw new InvalidOperationException("Is infinite"),
+                    null => throw new InvalidTokenException("Empty equation"),
+                    var dbl when !double.IsFinite(dbl.Value) => throw new InvalidTokenException("Is infinite"),
                     var eval => eval.ToString(),
                 };
             }
-            catch (Exception)
+            catch (InvalidTokenException)
             {
                 // throw;
                 return "ERROR";
@@ -128,24 +134,30 @@ namespace Experiments
         // factor         → unary ( ( "/" | "*" ) unary )* ;
         // unary          → "-" unary | pow ;
         // pow            → primary "&" pow | primary;
-        // primary        → func? "(" expression ")" | number;
+        // primary        → func? "(" term ")" | number;
         private Expr CreateExpr(IEnumerator<Token> enumerator)
         {
-            Token? previous = default;
+            // Token? previous = default;
 
             if (!enumerator.MoveNext())
                 throw new InvalidTokenException();
 
-            return Term();
+            return Term() switch
+            {
+                _ when enumerator.MoveNext() => throw new InvalidTokenException(),
+                var expr => expr,
+            };
 
             Expr Term()
             {
                 var expr = Factor();
 
-                while (enumerator.MoveNext() 
-                       && enumerator.Current is Operation op
+                while (enumerator.Current is Operation op
                        && (op.Type == OpType.Plus || op.Type == OpType.Minus))
                 {
+                    if (!enumerator.MoveNext())
+                        throw new InvalidTokenException(op);
+
                     expr = new Binary(expr, op, Factor());
                 }
 
@@ -156,10 +168,12 @@ namespace Experiments
             {
                 var expr = Unary();
 
-                while (enumerator.MoveNext()
-                       && enumerator.Current is Operation op 
+                while (enumerator.Current is Operation op 
                        && (op.Type == OpType.Mult || op.Type == OpType.Div))
                 {
+                    if (!enumerator.MoveNext())
+                        throw new InvalidTokenException(op);
+                    
                     expr = new Binary(expr, op, Unary());
                 }
 
@@ -191,7 +205,7 @@ namespace Experiments
                 string funcStr = enumerator.Current switch
                 {
                     Func func when enumerator.MoveNext() => func.Value,
-                    { } => "",
+                    _ => "",
                 };
 
                 return enumerator.Current switch
@@ -207,90 +221,16 @@ namespace Experiments
                 };;
             }
 
-            bool TryGetNext(out Token? token)
-            {
-                token = default;
-                if (!enumerator.MoveNext())
-                    return false;
-
-                token = previous = enumerator.Current;
-                return true;
-            }
+            // bool TryGetNext(out Token? token)
+            // {
+            //     token = default;
+            //     if (!enumerator.MoveNext())
+            //         return false;
+            //
+            //     token = previous = enumerator.Current;
+            //     return true;
+            // }
         }
-        
-
-        // private Expr EvalRec(
-        //     IEnumerator<Token> enumerator,
-        //     Expr? prevExpr = null,
-        //     Operation? prevOp = null)
-        // {
-        //     if (!enumerator.MoveNext())
-        //         return prevExpr ?? throw new InvalidTokenException();
-        //
-        //     // TODO: rename to functionToken
-        //     Token? prevToken = null;
-        //     if (enumerator.Current is Func || enumerator.Current is Operation { Type: OpType.Minus })
-        //     {
-        //         prevToken = enumerator.Current;
-        //
-        //         if (!enumerator.MoveNext())
-        //             throw new InvalidTokenException();
-        //     }
-        //
-        //     Token token = enumerator.Current;
-        //     Expr expr = token switch
-        //     {
-        //         Paren { Type: ParenType.Left } => prevToken switch
-        //         {
-        //             Func func => new Unary(EvalRec(enumerator), func.Value),
-        //             Operation { Type: OpType.Minus } => new Unary(EvalRec(enumerator), "-"),
-        //             null => new Unary(EvalRec(enumerator)),
-        //             _ => throw new InvalidTokenException(token),
-        //         },
-        //         Num num when prevToken is Operation { Type: OpType.Minus } => new Unary(new Number(num.Value), "-"),
-        //         Num num => new Number(num.Value),
-        //         Operation { Type: OpType.Minus } when prevToken is Operation { Type: OpType.Minus } =>
-        //             EvalRec(enumerator, prevExpr, prevOp),
-        //         _ => throw new InvalidTokenException(token),
-        //     };
-        //
-        //     var nextToken = enumerator.Current; //TODO: right paren checking doesnt work
-        //     if (token is Paren { Type: ParenType.Left } && !(nextToken is Paren { Type: ParenType.Right }))
-        //         throw new InvalidTokenException(enumerator.Current);
-        //
-        //     if (!enumerator.MoveNext() || enumerator.Current is Paren { Type: ParenType.Right })
-        //         return expr;
-        //
-        //     if (!(enumerator.Current is Operation operation))
-        //         throw new InvalidTokenException(enumerator.Current);
-        //
-        //     // BUG: "-".HasHigherPriorityThen("*") == false => there is not processing "-"
-        //     if (operation.HasHigherPriorityThen(prevOp))
-        //     {
-        //         var nextExpr = EvalRec(enumerator, expr, operation);
-        //
-        //         if (enumerator.Current is Operation nextOperation)
-        //         {
-        //             if (prevOp is null)
-        //             {
-        //                 var tempExpr = new Binary(expr, operation, nextExpr);
-        //
-        //                 return new Binary(tempExpr, nextOperation, EvalRec(enumerator, tempExpr, nextOperation));
-        //             }
-        //
-        //             if (prevOp?.Priority <= nextOperation.Priority)
-        //             {
-        //                 var tempExpr = new Binary(nextExpr, nextOperation, EvalRec(enumerator, nextExpr, nextOperation));
-        //                 
-        //                 return new Binary(expr, operation, tempExpr);
-        //             }
-        //         }
-        //
-        //         return new Binary(expr, operation, nextExpr);
-        //     }
-        //
-        //     return expr;
-        // }
     }
 
     public abstract class Expr
@@ -387,7 +327,7 @@ namespace Experiments
             {
                 token.InitialStr = initialString;
 
-                var expectedIndex = prev?.Index + prev?.Lenght;
+                var expectedIndex = prev?.Index + prev?.Length;
 
                 if (token.Index > expectedIndex)
                     throw new InvalidTokenException(prev, token);
@@ -405,17 +345,11 @@ namespace Experiments
 
     public class InvalidTokenException : Exception
     {
-        public InvalidTokenException() : base("Invalid expression's ending") { }
-        public InvalidTokenException(Token token) : base($"Invalid token: {token}\n{Highlight(token)}") { }
+        public InvalidTokenException(string? message = null) : base(message ?? "Invalid expression's ending") { }
+        public InvalidTokenException(Token? token) : base($"Invalid token: {token}\n{token?.Highlight() ?? ""}") { }
         public InvalidTokenException(Token? token1, Token token2)
-            : base($"Invalid token!\n{HighlightBetween(token1, token2)}")
+            : base($"Invalid token!\n{token2.HighlightAfter(token1)}")
         {
         }
-
-        private static string Highlight(Token token) => HighlightArea(token.InitialStr ?? "", token.Index, token.Lenght);
-        private static string HighlightBetween(Token? token1, Token token2) =>
-            HighlightArea(token2.InitialStr ?? "", token1?.LastIndex ?? 0, token2.Index - (token1?.LastIndex ?? 0));
-        private static string HighlightArea(string expression, int index, int length) =>
-            expression + "\n" + (new string(' ', index) + new string('^', length)).PadRight(expression.Length);
     }
 }

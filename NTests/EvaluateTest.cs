@@ -23,13 +23,19 @@ namespace NTests
         [TestCase("2*5/0", "ERROR")]
         [TestCase("-5&3&2*2-1", "-3906251")]
         [TestCase("abs(-(-1+(2*(4--3)))&2)", "169")]
-        [TestCase("abs(-(-1+(2*(4--3))))&2)", "ERROR")]
+        [TestCase("abs(-(-1+(2*(4--3))))&2)", "ERROR", true, Description = "Extra bracket")]
+        [TestCase("abs(-(-1+(2*(4--3)))&2))", "ERROR", true, Description = "Extra bracket")]
+        [TestCase("abs(-(-1+(2*(4--3))&2)", "ERROR", false, Description = "Missing bracket")]
         [TestCase("abs(-2 * 1e-3)", "0.002")]
         [TestCase("-2&2", "-4")]
-        public void Eval_Test1(string expr, string expected)
+        public void Eval_Test1(string expr, string expected, bool hasPrint = true)
         {
-            Console.WriteLine(expr);
-            ev.Print(expr);
+            if (hasPrint)
+            {
+                Console.WriteLine(expr);
+                ev.Print(expr);
+            }
+            
             ev.Eval(expr).Should().Be(expected);
         }
 
