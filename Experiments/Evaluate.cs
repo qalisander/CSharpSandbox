@@ -1,6 +1,6 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -36,9 +36,9 @@ namespace Experiments
         public string? InitialStr { get; set; }
         public int Length => Value.Length;
         public int LastIndex => Index + Length;
-        public override string ToString() => $"<{GetType().Name} id[{Index}] '{Value}'>\n{Highlight()}\n";
+        public override string ToString() => $"<{GetType().Name} id[{Index}] '{Value}'>";
         
-        public string Highlight() => string.IsNullOrEmpty(InitialStr)
+        public string HighlightedStr => string.IsNullOrEmpty(InitialStr)
             ? ""
             : HighlightArea(InitialStr, Index, Length);
         public string HighlightAfter(Token? token) =>
@@ -90,7 +90,7 @@ namespace Experiments
         public readonly List<(string regexp, Func<Match, Token> createToken)> RegexpToToken =
             new List<(string regexp, Func<Match, Token> createToken)>
             {
-                ( /*language=regexp*/ @"\d+(\.?\d+)?([eE]-?\d+)?", Num.Create),
+                ( /*language=regexp*/ @"\d+(\.?\d+)?([eE]-?\+?\d+)?", Num.Create),
                 ( /*language=regexp*/ "[A-Za-z]+", Func.Create),
                 ( /*language=regexp*/ @"\(", Paren.Create(ParenType.Left)),
                 ( /*language=regexp*/ @"\)", Paren.Create(ParenType.Right)),
@@ -137,21 +137,22 @@ namespace Experiments
         // primary        → func? "(" term ")" | number;
         private Expr CreateExpr(IEnumerator<Token> enumerator)
         {
-            // Token? previous = default;
-
             if (!enumerator.MoveNext())
                 throw new InvalidTokenException();
 
             return Term() switch
             {
-                _ when enumerator.MoveNext() => throw new InvalidTokenException(),
-                var expr => expr,
+                // ReSharper disable once ConditionIsAlwaysTrueOrFalse
+                var expr when enumerator.Current is null => expr,
+                _ => throw new InvalidTokenException(),
             };
 
+            //TODO: remake as recursive call
             Expr Term()
             {
                 var expr = Factor();
 
+                //TODO: call enumerator move next in cicle
                 while (enumerator.Current is Operation op
                        && (op.Type == OpType.Plus || op.Type == OpType.Minus))
                 {
@@ -180,14 +181,12 @@ namespace Experiments
                 return expr;
             }
 
-            Expr Unary()
-            {
-                return enumerator.Current is Operation { Type: OpType.Minus }
+            Expr Unary() =>
+                enumerator.Current is Operation { Type: OpType.Minus }
                     ? enumerator.MoveNext()
                         ? new Unary(Unary(), "-")
                         : throw new InvalidTokenException()
                     : Pow();
-            }
 
             Expr Pow()
             {
@@ -220,16 +219,6 @@ namespace Experiments
                     _ => throw new InvalidTokenException(enumerator.Current),
                 };;
             }
-
-            // bool TryGetNext(out Token? token)
-            // {
-            //     token = default;
-            //     if (!enumerator.MoveNext())
-            //         return false;
-            //
-            //     token = previous = enumerator.Current;
-            //     return true;
-            // }
         }
     }
 
@@ -345,11 +334,14 @@ namespace Experiments
 
     public class InvalidTokenException : Exception
     {
-        public InvalidTokenException(string? message = null) : base(message ?? "Invalid expression's ending") { }
-        public InvalidTokenException(Token? token) : base($"Invalid token: {token}\n{token?.Highlight() ?? ""}") { }
+        public InvalidTokenException(string message) : base(message) { }
+        public InvalidTokenException(Token? token = null) : base(InvalidTokenStr(token)) { }
         public InvalidTokenException(Token? token1, Token token2)
             : base($"Invalid token!\n{token2.HighlightAfter(token1)}")
         {
         }
+        static string InvalidTokenStr(Token? token) => token is null
+            ? "Invalid expression's ending"
+            : $"Invalid token: {token}\n{token.HighlightedStr}";
     }
 }
