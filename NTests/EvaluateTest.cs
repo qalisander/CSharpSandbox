@@ -29,7 +29,10 @@ namespace NTests
         [TestCase("abs(-2 * 1e-3)", "0.002")]
         [TestCase("-2&2", "-4")]
         [TestCase("sin(cos(-1--2*1e+2))", "-0.45433511999330306")]
-        [TestCase("((2)", "ERROR", true)]
+        [TestCase("((2)", "ERROR", false)]
+        [TestCase("1 + 2  + 3 +4", "10")]
+        [TestCase("1*2*3*4", "24")]
+        [TestCase("abs-1)", "ERROR", false)]
         public void Eval_Test1(string expr, string expected, bool hasPrint = true)
         {
             if (hasPrint)
@@ -62,6 +65,7 @@ namespace NTests
             act.Should().Throw<InvalidTokenException>();
         }
 
+        // https://docs.microsoft.com/en-us/dotnet/standard/base-types/regular-expression-options
         [Ignore("regexp test")]
         [Test]
         public void Regexp_test()

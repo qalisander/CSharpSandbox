@@ -7,9 +7,6 @@ using System.Text.RegularExpressions;
 
 // https://www.codewars.com/kata/564d9ebde30917684f000048/train/csharp
 // Lexer examples https://github.com/mauriciomoccelin/compiler
-// https://docs.microsoft.com/en-us/dotnet/standard/base-types/regular-expression-options
-// https://en.wikipedia.org/wiki/Lexical_grammar
-// https://en.wikipedia.org/wiki/Lexical_analysis
 namespace Experiments
 {
     public enum ParenType
@@ -20,12 +17,11 @@ namespace Experiments
 
     public enum OpType
     {
-        //NOTE: first digit - priority
-        Plus = 10,
+        Plus,
         Minus,
-        Mult = 20,
+        Mult,
         Div,
-        Pow = 30,
+        Pow,
     }
 
     public class Token
@@ -36,11 +32,12 @@ namespace Experiments
         public string? InitialStr { get; set; }
         public int Length => Value.Length;
         public int LastIndex => Index + Length;
-        public override string ToString() => $"<{GetType().Name} id[{Index}] '{Value}'>";
-        
+
         public string HighlightedStr => string.IsNullOrEmpty(InitialStr)
             ? ""
             : HighlightArea(InitialStr, Index, Length);
+
+        public override string ToString() => $"<{GetType().Name} id[{Index}] '{Value}'>";
         public string HighlightAfter(Token? token) =>
             HighlightArea(InitialStr ?? "", token?.LastIndex ?? 0, Index - (token?.LastIndex ?? 0));
         private static string HighlightArea(string expression, int index, int length) =>
@@ -76,12 +73,6 @@ namespace Experiments
     {
         private Operation(OpType type, Match match) : base(match) => Type = type;
         public OpType Type { get; }
-
-        public bool HasHigherPriorityThen(Operation? prevOp) =>
-            Type == OpType.Pow
-            || prevOp is null //TODO: prlly remove
-            || (int) Type / 10 > (int) prevOp.Type / 10;
-
         public static Func<Match, Token> Create(OpType type) => match => new Operation(type, match);
     }
 
@@ -101,7 +92,7 @@ namespace Experiments
                 ( /*language=regexp*/ "&", Operation.Create(OpType.Pow)),
                 ( /*language=regexp*/ @"\s+", Space.Create),
             };
-        
+
         public IEnumerable<Token> Scan(string expr) =>
             RegexpToToken.SelectMany(pair => Regex.Matches(expr, pair.regexp).Select(pair.createToken))
                          .OrderBy(token => token.Index)
@@ -128,7 +119,7 @@ namespace Experiments
                 return "ERROR";
             }
         }
-        
+
         // expression     → term ;
         // term           → factor ( ( "-" | "+" ) factor )* ;
         // factor         → unary ( ( "/" | "*" ) unary )* ;
@@ -147,39 +138,23 @@ namespace Experiments
                 _ => throw new InvalidTokenException(),
             };
 
-            //TODO: remake as recursive call
-            Expr Term()
-            {
-                var expr = Factor();
+            Expr Term(Expr? prevExpr = null) =>
+                (prevExpr ??= Factor()) is var expr
+                && enumerator.Current is Operation op
+                && (op.Type == OpType.Plus || op.Type == OpType.Minus)
+                    ? enumerator.MoveNext()
+                        ? Term(new Binary(expr, op, Factor()))
+                        : throw new InvalidTokenException()
+                    : expr;
 
-                //TODO: call enumerator move next in cicle
-                while (enumerator.Current is Operation op
-                       && (op.Type == OpType.Plus || op.Type == OpType.Minus))
-                {
-                    if (!enumerator.MoveNext())
-                        throw new InvalidTokenException(op);
-
-                    expr = new Binary(expr, op, Factor());
-                }
-
-                return expr;
-            }
-
-            Expr Factor()
-            {
-                var expr = Unary();
-
-                while (enumerator.Current is Operation op 
-                       && (op.Type == OpType.Mult || op.Type == OpType.Div))
-                {
-                    if (!enumerator.MoveNext())
-                        throw new InvalidTokenException(op);
-                    
-                    expr = new Binary(expr, op, Unary());
-                }
-
-                return expr;
-            }
+            Expr Factor(Expr? prevExpr = null) =>
+                (prevExpr ??= Unary()) is var expr
+                && enumerator.Current is Operation op
+                && (op.Type == OpType.Mult || op.Type == OpType.Div)
+                    ? enumerator.MoveNext()
+                        ? Factor(new Binary(expr, op, Unary()))
+                        : throw new InvalidTokenException(op)
+                    : expr;
 
             Expr Unary() =>
                 enumerator.Current is Operation { Type: OpType.Minus }
@@ -188,16 +163,14 @@ namespace Experiments
                         : throw new InvalidTokenException()
                     : Pow();
 
-            Expr Pow()
-            {
-                var expr = Primary();
-
-                return enumerator.MoveNext() && enumerator.Current is Operation { Type: OpType.Pow } op
+            Expr Pow() =>
+                Primary() is var expr
+                && enumerator.MoveNext()
+                && enumerator.Current is Operation { Type: OpType.Pow } op
                     ? enumerator.MoveNext()
                         ? new Binary(expr, op, Pow())
                         : throw new InvalidTokenException()
                     : expr;
-            }
 
             Expr Primary()
             {
@@ -211,13 +184,13 @@ namespace Experiments
                 {
                     Paren { Type: ParenType.Left } when enumerator.MoveNext() => Term() switch
                     {
-                        var term when enumerator.Current is Paren { Type: ParenType.Right} => 
+                        var term when enumerator.Current is Paren { Type: ParenType.Right } =>
                             new Unary(term, funcStr),
                         _ => throw new InvalidTokenException(enumerator.Current),
                     },
                     Num num => new Number(num.Value),
                     _ => throw new InvalidTokenException(enumerator.Current),
-                };;
+                };
             }
         }
     }
@@ -267,7 +240,7 @@ namespace Experiments
         public Unary(Expr arg, string func = "") : base(arg) => FunctionStr = func;
         
         private string FunctionStr { get; }
-        
+
         public override double Eval() => Calculate(Arg.Eval());
         private double Calculate(double num) => FunctionStr switch
         {
@@ -301,7 +274,7 @@ namespace Experiments
         private Expr Arg2 { get; }
         private string OpStr { get; }
         private Func<double, double, double> Function { get; }
-        
+
         public override double Eval() => Function(Arg.Eval(), Arg2.Eval());
         public override string ToString() => $"[ {Arg} {OpStr} {Arg2} ]";
     }
@@ -340,7 +313,7 @@ namespace Experiments
             : base($"Invalid token!\n{token2.HighlightAfter(token1)}")
         {
         }
-        static string InvalidTokenStr(Token? token) => token is null
+        private static string InvalidTokenStr(Token? token) => token is null
             ? "Invalid expression's ending"
             : $"Invalid token: {token}\n{token.HighlightedStr}";
     }
