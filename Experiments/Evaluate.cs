@@ -103,13 +103,13 @@ namespace Experiments
                          .ProcessTokens(expr)
                          .Where(token => !(token is Space));
 
-        public void Print(string expr) => Console.WriteLine(EvalRec(Scan(expr).GetEnumerator()));
+        public void Print(string expr) => Console.WriteLine(CreateExpr(Scan(expr).GetEnumerator()));
 
         public string? Eval(string expr)
         {
             try
             {
-                return EvalRec(Scan(expr).GetEnumerator())?.Eval() switch
+                return CreateExpr(Scan(expr).GetEnumerator())?.Eval() switch
                 {
                     null => throw new InvalidOperationException("Empty equation"),
                     var dbl when !double.IsFinite(dbl.Value) => throw new InvalidOperationException("Is infinite"),
@@ -136,19 +136,43 @@ namespace Experiments
             if (!enumerator.MoveNext())
                 throw new InvalidTokenException();
 
+            return Term();
+
             Expr Term()
             {
-                throw new NotImplementedException();
+                var expr = Factor();
+
+                while (enumerator.MoveNext() 
+                       && enumerator.Current is Operation op
+                       && (op.Type == OpType.Plus || op.Type == OpType.Minus))
+                {
+                    expr = new Binary(expr, op, Factor());
+                }
+
+                return expr;
             }
 
             Expr Factor()
             {
-                throw new NotImplementedException();
+                var expr = Unary();
+
+                while (enumerator.MoveNext()
+                       && enumerator.Current is Operation op 
+                       && (op.Type == OpType.Mult || op.Type == OpType.Div))
+                {
+                    expr = new Binary(expr, op, Unary());
+                }
+
+                return expr;
             }
 
             Expr Unary()
             {
-                throw new NotImplementedException();
+                return enumerator.Current is Operation { Type: OpType.Minus }
+                    ? enumerator.MoveNext()
+                        ? new Unary(Unary(), "-")
+                        : throw new InvalidTokenException()
+                    : Pow();
             }
 
             Expr Pow()
@@ -156,7 +180,9 @@ namespace Experiments
                 var expr = Primary();
 
                 return enumerator.MoveNext() && enumerator.Current is Operation { Type: OpType.Pow } op
-                    ? new Binary(expr, op, Pow())
+                    ? enumerator.MoveNext()
+                        ? new Binary(expr, op, Pow())
+                        : throw new InvalidTokenException()
                     : expr;
             }
 
@@ -165,8 +191,7 @@ namespace Experiments
                 string funcStr = enumerator.Current switch
                 {
                     Func func when enumerator.MoveNext() => func.Value,
-                    Paren _ => "",
-                    { } token => throw new InvalidTokenException(token),
+                    { } => "",
                 };
 
                 return enumerator.Current switch
