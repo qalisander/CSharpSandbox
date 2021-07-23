@@ -1,11 +1,11 @@
 using System;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Experiments;
-using NUnit.Framework;
+using Experiments.Completed;
 using FluentAssertions;
+using NUnit.Framework;
 
-namespace NTests
+namespace NTests.Completed
 {
     // Fluent assertion: https://fluentassertions.com/introduction
     [TestFixture]
