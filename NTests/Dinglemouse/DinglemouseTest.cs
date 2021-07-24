@@ -11,7 +11,8 @@ namespace NTests
     {
         [Test]
         [TestCase(3, "KataTrains_SimpleCircle.txt", "Aaaa", 0, "Bbbbbbbbbbb", 0, 1000)]
-        [TestCase(5, "KataTrains_SimpleCrossing.txt", "Aaaa", 147, "Bbbbbbbbbbb", 288, 1000)]
+        [TestCase(5, "KataTrains_SimpleCrossing.txt", "Aaaa", 0, "Bbbbbbbbbbb", 0, 1000)]
+        [TestCase(14, "KataTrains_SimpleStation.txt", "Aaaa", 0, "Bbbbbbbbbbbbbb", 0, 1000)]
         [TestCase(516, "KataTrains.txt", "Aaaa", 147, "Bbbbbbbbbbb", 288, 1000)]
         public void Example(
             int expected, string TestFile, string aTrain, int aTrainPos, string bTrain, int bTrainPos, int limit)
