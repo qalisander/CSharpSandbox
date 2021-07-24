@@ -1,7 +1,6 @@
 ﻿using System.IO;
 using System.Runtime.CompilerServices;
 using Experiments;
-using Experiments.Completed;
 using NUnit.Framework;
 
 namespace NTests
@@ -10,9 +9,9 @@ namespace NTests
     public class DinglemouseTest
     {
         [Test]
-        [TestCase(3, "KataTrains_SimpleCircle.txt", "Aaaa", 0, "Bbbbbbbbbbb", 0, 1000)]
-        [TestCase(5, "KataTrains_SimpleCrossing.txt", "Aaaa", 0, "Bbbbbbbbbbb", 0, 1000)]
-        [TestCase(14, "KataTrains_SimpleStation.txt", "Aaaa", 0, "Bbbbbbbbbbbbbb", 0, 1000)]
+        [TestCase(3, "KataTrains_SimpleCircle.txt", "aaaA", -1, "Bbbbbbbbbbb", -1, 1000)]
+        [TestCase(5, "KataTrains_SimpleCrossing.txt", "Aaaa", -1, "bbbbbbbbbbB", -1, 1000)]
+        [TestCase(13, "KataTrains_SimpleStation.txt", "aaaA", -1, "Bbbbbbbbbbbbbb", -1, 1000)]
         [TestCase(516, "KataTrains.txt", "Aaaa", 147, "Bbbbbbbbbbb", 288, 1000)]
         public void Example(
             int expected, string TestFile, string aTrain, int aTrainPos, string bTrain, int bTrainPos, int limit)

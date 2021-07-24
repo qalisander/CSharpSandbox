@@ -7,21 +7,41 @@ namespace Experiments
 {
     public class Tile
     {
-        public Tile(char symbol)
+        public Tile(char symbol, (int x, int y) coordinates)
         {
-            // PossibleDirs = GetDir(symbol);
             Symbol = symbol;
+            Coordinates = coordinates;
         }
         
-        // public Dir[] PossibleDirs { get; }
         public char Symbol { get; }
+        public bool IsStation => Symbol == 'S';
+        public bool IsEmpty => Symbol == ' ';
+        public (int x, int y) Coordinates { get; }
         
         public Train? Train { get; set; }
+        public Tile? Previous { get; set; }
+        public Tile? Next { get; set; }
+        public int Position { get; set; } = -1;
 
-        private static ILookup<(char ch, (int dx, int dy) incomingDir), (int dx, int dy)> charToNewPossibleDir =
-            MixOutputAndInput(GetDirections()).ToLookup(t => (t.ch, t.input), t => t.output);
+        public (int x, int y)[] NextPossibleCoordinates((int x, int y)? from = null)
+        {
+            var nextCoord =
+                (Coordinates.x - (from?.x ?? Previous.Coordinates.x), Coordinates.y - (from?.y ?? Previous.Coordinates.y));
+            
+            var newDirections = _charToNewDirections[(Symbol, nextCoord)].ToArray();
 
-        private static IEnumerable<(char ch, (int dx, int dy) input, (int dx, int dy) output)> GetDirections()
+            return newDirections.Any()
+                ? newDirections
+                : char.IsLetter(Symbol) // NOTE: train or station
+                    ? _charToNewDirections[('-', nextCoord)].ToArray()
+                    : throw new InvalidOperationException("Symbol not found in hashmap");
+        }
+
+        private static readonly ILookup<(char ch, (int dx, int dy) incomingDir), (int dx, int dy)> _charToNewDirections =
+            MixOutputAndInput(GetDirections()).ToLookup(t => (t.ch, input: t.@from), t => t.to);
+
+        public override string ToString() => $"{nameof(Symbol)}: {Symbol}, {nameof(Coordinates)}: {Coordinates}, {nameof(Position)}: {Position}";
+        private static IEnumerable<(char ch, (int dx, int dy) from, (int dx, int dy) to)> GetDirections()
         {
             //            (0, 1)
             //     (-1, 1)  |    (1, 1)
@@ -31,7 +51,7 @@ namespace Experiments
             //    (-1, -1)  |   (1, -1)
             //           (0, -1)
             
-            var charToDeltaDirection = new (char ch, (int x, int y) input, (int x, int y) output)[]
+            var charToDeltaDirection = new (char ch, (int x, int y) from, (int x, int y) to)[]
             {
                 ('|', (0, -1), (0, 1)),
                 ('-', (-1, 0), (1, 0)),
@@ -56,81 +76,101 @@ namespace Experiments
                 yield return tpl;
 
                 if (tpl.ch == '/')
-                    yield return ('\\', (-tpl.input.x, -tpl.input.y), (-tpl.output.x, -tpl.output.y));
+                    yield return ('\\', (-tpl.@from.x, -tpl.@from.y), (-tpl.to.x, -tpl.to.y));
 
                 if (tpl.ch == 'X' || tpl.ch == '+')
-                    yield return ('S', tpl.input, tpl.output);
+                    yield return ('S', tpl.@from, tpl.to);
             }
         }
 
-        private static IEnumerable<(char ch, T input, T output)> MixOutputAndInput<T>(IEnumerable<(char ch, T input, T output)> enumerable)
+        private static IEnumerable<(char ch, T from, T to)> MixOutputAndInput<T>(IEnumerable<(char ch, T from, T to)> enumerable)
         {
             foreach (var tpl in enumerable)
             {
-                yield return (tpl.ch, tpl.input, tpl.output);
-                yield return (tpl.ch, tpl.output, tpl.input);
+                yield return (tpl.ch, tpl.from, tpl.to);
+                yield return (tpl.ch, tpl.to, tpl.from);
             }
         }
     }
 
     public class Train
     {
-        public Train(char c, int length)
+        public Train(string str)
         {
-            Char = c;
-            Length = length;
+            Char = char.ToUpper(str[0]);
+            Length = str.Length;
+            HasClockwiseDirection = char.IsLower(str[0]);
         }
         public char Char { get; set; }
-        public int Position { get; set; }
-        public int Length { get; set; }
         public bool HasClockwiseDirection { get; set; }
+        public int Length { get; set; }
+
+        public int Position { get; set; }
         public int TimeToWait { get; set; } = 0;
         public bool IsExpress => Char == 'X';
-
-        // public int TailPosition => IsStraghtDirection
-        //     ? Position - (Length - 1)
-        //     : Position + (Length - 1);
     }
-
-    // NOTE:
-    // Field
-    //      Tile[][] _filed 
-    //      Track
-    //      Train
-    //      
+    
     public class Field
     {
         private readonly Tile[][] _field;
-        private Tile GetTile((int x, int y) point) => _field[point.y][point.x]; // TODO: check for valid x and y
+        private Tile? TryGetTile((int x, int y) point) => IsInBounds(point) ? _field[point.y][point.x] : null;
+        private bool IsInBounds((int x, int y) point) =>
+            0 <= point.y && point.y < _field.Length && 0 <= point.x && point.x < _field[0].Length;
+
         private Tile ZeroTile { get; }
 
-        private Dictionary<string, Train> Trains = new Dictionary<string, Train>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<char, Train> Trains = new Dictionary<char, Train>();
 
-        public Field(string track, string aTrain, string bTrain)
+        public Field(string track, string firstTrain, string secondTrain)
         {
             _field = track
                      .Split('\n')
-                     .Select((str, i) => str.ToCharArray().Select(ch => new Tile(ch)).ToArray())
+                     .Select((str, i) => str.ToCharArray().Select((ch, j) => new Tile(ch, (j, i))).ToArray())
                      .ToArray();
 
             ZeroTile = _field[0].FirstOrDefault(tile => tile.Symbol != ' ')
                        ?? throw new InvalidOperationException("Zero tile not found");
 
-            Trains[aTrain[0].ToString()] = new Train(aTrain[0], aTrain.Length);
-            Trains[bTrain[0].ToString()] = new Train(bTrain[0], bTrain.Length);
+            Trains[char.ToUpper(firstTrain[0])] = new Train(firstTrain);
+            Trains[char.ToUpper(secondTrain[0])] = new Train(secondTrain);
+        }
 
-            Tile CreateTile(char ch, int i, int j)
+        public Field CreateTrack()
+        {
+            var current = TryGetTile((ZeroTile.Coordinates.x + 1, ZeroTile.Coordinates.y));
+
+            if (current is null || current.Symbol != '-')
+                throw new InvalidOperationException($"Invalid track on tile: <{ZeroTile}>");
+
+            ZeroTile.Next = current;
+            ZeroTile.Position = 0;
+            
+            current.Previous = ZeroTile;
+            current.Position = 1;
+
+            while (current != ZeroTile)
             {
-                if (char.IsLetter(ch) && Trains.ContainsKey(ch.ToString()))
+                var nextTile = current.NextPossibleCoordinates()
+                                      .Select(TryGetTile)
+                                      .FirstOrDefault(tile =>
+                                          tile != null && tile.NextPossibleCoordinates(current.Coordinates).Any());
+
+                if (nextTile is null)
+                    throw new InvalidOperationException($"Invalid track on tile: <{current}>");
+
+                current.Next = nextTile;
+                nextTile.Previous = current;
+                nextTile.Position = current.Position + 1;
+                current = nextTile;
+
+                if (Trains.TryGetValue(char.ToUpper(current.Symbol), out var train))
                 {
-                    
+                    // TODO: logic with trains
                 }
             }
+
+            return this;
         }
-        
-        private (int y, int x) Start { get; }
-        private (int y, int x) Current { get; set; }
-        private (int y, int x) Previous { get; set; }
     }
     
     public class Dinglemouse
@@ -138,12 +178,11 @@ namespace Experiments
         public static int TrainCrash(
             string trackStr, string aTrain, int aTrainPos, string bTrain, int bTrainPos, int limit)
         {
-            var track = new Field(trackStr, aTrain, bTrain).Build();
+            var track = new Field(trackStr, aTrain, bTrain).CreateTrack();
 
             for (var step = 1; step <= limit; step++)
             {
-                if (track.MakeStep().IsCollisionDetected())
-                    return step;
+                throw new NotImplementedException();
             }
 
             throw new NotImplementedException();
