@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 
 // https://www.codewars.com/kata/564d9ebde30917684f000048/train/csharp
+// Nice solution: AzariasB
 // Lexer examples https://github.com/mauriciomoccelin/compiler
 namespace Experiments.Completed
 {
