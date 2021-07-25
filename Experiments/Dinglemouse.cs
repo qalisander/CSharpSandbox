@@ -17,27 +17,25 @@ namespace Experiments
         public bool IsStation => Symbol == 'S';
         public bool IsEmpty => Symbol == ' ';
         public (int x, int y) Coordinates { get; }
-        
-        public Train? Train { get; set; }
         public Tile? Previous { get; set; }
         public Tile? Next { get; set; }
         public int Position { get; set; } = -1;
 
-        public (int x, int y)[] NextPossibleCoordinates((int x, int y)? from = null)
+        public IEnumerable<(int x, int y)> NextPossibleCoordinates((int x, int y)? from = null)
         {
             var nextCoord =
                 (Coordinates.x - (from?.x ?? Previous.Coordinates.x), Coordinates.y - (from?.y ?? Previous.Coordinates.y));
             
-            var newDirections = _charToNewDirections[(Symbol, nextCoord)].ToArray();
+            var newDirections = CharToNewDirections[(Symbol, nextCoord)].ToArray();
 
             return newDirections.Any()
                 ? newDirections
                 : char.IsLetter(Symbol) // NOTE: train or station
-                    ? _charToNewDirections[('-', nextCoord)].ToArray()
-                    : throw new InvalidOperationException("Symbol not found in hashmap");
+                    ? CharToNewDirections[('-', nextCoord)].ToArray()
+                    : throw new InvalidOperationException("Symbol was not found in hashmap");
         }
 
-        private static readonly ILookup<(char ch, (int dx, int dy) incomingDir), (int dx, int dy)> _charToNewDirections =
+        private static readonly ILookup<(char ch, (int dx, int dy) incomingDir), (int dx, int dy)> CharToNewDirections =
             MixOutputAndInput(GetDirections()).ToLookup(t => (t.ch, input: t.@from), t => t.to);
 
         public override string ToString() => $"{nameof(Symbol)}: {Symbol}, {nameof(Coordinates)}: {Coordinates}, {nameof(Position)}: {Position}";
@@ -95,19 +93,37 @@ namespace Experiments
 
     public class Train
     {
-        public Train(string str)
+        public Train(string str, int position = -1)
         {
+            Position = position;
             Char = char.ToUpper(str[0]);
             Length = str.Length;
-            HasClockwiseDirection = char.IsLower(str[0]);
+            IsClockwise = char.IsLower(str[0]);
         }
-        public char Char { get; set; }
-        public bool HasClockwiseDirection { get; set; }
-        public int Length { get; set; }
+        public char Char { get; }
+        public bool IsClockwise { get; }
+        public int Length { get; }
+        public Tile? Head { get; set; }
+        public Tile? Tail { get; set; }
 
-        public int Position { get; set; }
+        public int Position { get; set; } // TODO: Position should use Head tile
         public int TimeToWait { get; set; } = 0;
         public bool IsExpress => Char == 'X';
+
+        public void Move()
+        {
+            if (IsExpress || TimeToWait == 0)
+            {
+                Head = Head.Next;
+                Tail = Tail.Next;
+
+                TimeToWait = Head.IsStation ? Length : 0;
+            }
+            else
+            {
+                TimeToWait--;
+            }
+        }
     }
     
     public class Field
@@ -119,9 +135,10 @@ namespace Experiments
 
         private Tile ZeroTile { get; }
 
-        private readonly Dictionary<char, Train> Trains = new Dictionary<char, Train>();
+        private readonly Dictionary<char, Train> _charToTrain = new Dictionary<char, Train>();
+        public IEnumerable<Train> Trains => _charToTrain.Values;
 
-        public Field(string track, string firstTrain, string secondTrain)
+        public Field(string track, string firstTrain, int firstTrainPos, string secondTrain, int secondTrainPos)
         {
             _field = track
                      .Split('\n')
@@ -131,8 +148,8 @@ namespace Experiments
             ZeroTile = _field[0].FirstOrDefault(tile => tile.Symbol != ' ')
                        ?? throw new InvalidOperationException("Zero tile not found");
 
-            Trains[char.ToUpper(firstTrain[0])] = new Train(firstTrain);
-            Trains[char.ToUpper(secondTrain[0])] = new Train(secondTrain);
+            _charToTrain[char.ToUpper(firstTrain[0])] = new Train(firstTrain, firstTrainPos);
+            _charToTrain[char.ToUpper(secondTrain[0])] = new Train(secondTrain, secondTrainPos);
         }
 
         public Field CreateTrack()
@@ -150,42 +167,102 @@ namespace Experiments
 
             while (current != ZeroTile)
             {
-                var nextTile = current.NextPossibleCoordinates()
-                                      .Select(TryGetTile)
-                                      .FirstOrDefault(tile =>
-                                          tile != null && tile.NextPossibleCoordinates(current.Coordinates).Any());
+                SetTrainInfo(current);
 
-                if (nextTile is null)
-                    throw new InvalidOperationException($"Invalid track on tile: <{current}>");
+                var nextTile = GetNextTile(current);
 
                 current.Next = nextTile;
                 nextTile.Previous = current;
                 nextTile.Position = current.Position + 1;
-                current = nextTile;
 
-                if (Trains.TryGetValue(char.ToUpper(current.Symbol), out var train))
-                {
-                    // TODO: logic with trains
-                }
+                current = nextTile;
             }
 
             return this;
+        }
+        
+        private Tile GetNextTile(Tile current)
+        {
+
+            var nextTile = current.NextPossibleCoordinates()
+                                  .Select(TryGetTile)
+                                  .FirstOrDefault(tile =>
+                                      tile != null && tile.NextPossibleCoordinates(current.Coordinates).Any());
+
+            if (nextTile is null || nextTile.IsEmpty)
+                throw new InvalidOperationException($"Invalid tile: <{current}>");
+
+            // NOTE: process crossing tile
+            if (nextTile.Position != -1)
+                nextTile = new Tile(nextTile.Symbol, nextTile.Coordinates);
+
+            return nextTile;
+        }
+
+        private void SetTrainInfo(Tile current)
+        {
+            if (!_charToTrain.TryGetValue(char.ToUpper(current.Symbol), out var train))
+                return;
+
+            var isTrainHead = char.IsUpper(current.Symbol);
+
+            if (isTrainHead && current.Position != train.Position)
+            {
+                train.Position = train.Position == -1
+                    ? current.Position
+                    : throw new InvalidOperationException(
+                        $"Train <{train.Char}> expected to have position: {train.Position} but has: {current.Position}");
+            }
+
+            if (isTrainHead)
+            {
+                train.Head = current;
+
+                if (train.Length == 1)
+                    train.Tail = current;
+            }
+            else if (train.Head is null)
+            {
+                train.Tail ??= current;
+            }
+            else
+            {
+                train.Tail = current;
+            }
+        }
+
+        public bool CollisionDetected()
+        {
+            return Trains.SelectMany(GetCoordinates)
+                         .GroupBy(point => point)
+                         .Any(g => g.Count() > 1);
+
+            IEnumerable<(int x, int y)> GetCoordinates(Train train)
+            {
+                for (var tile = train.Tail; tile != train.Head!.Next; tile = train.IsClockwise ? tile!.Next : tile!.Previous)
+                {
+                    yield return tile!.Coordinates;
+                }
+            }
         }
     }
     
     public class Dinglemouse
     {
-        public static int TrainCrash(
-            string trackStr, string aTrain, int aTrainPos, string bTrain, int bTrainPos, int limit)
+        public static int TrainCrash(string trackStr, string aTrain, int aTrainPos, string bTrain, int bTrainPos, int limit)
         {
-            var track = new Field(trackStr, aTrain, bTrain).CreateTrack();
+            var field = new Field(trackStr, aTrain, aTrainPos, bTrain, bTrainPos).CreateTrack();
 
-            for (var step = 1; step <= limit; step++)
+            for (var i = 0; i < limit; i++)
             {
-                throw new NotImplementedException();
+                if (field.CollisionDetected())
+                    return i;
+
+                foreach (var train in field.Trains)
+                    train.Move();
             }
 
-            throw new NotImplementedException();
+            return -1;
         }
     }
 }
