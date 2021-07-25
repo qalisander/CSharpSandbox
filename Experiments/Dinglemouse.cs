@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -24,8 +25,10 @@ namespace Experiments
 
         public IEnumerable<(int x, int y)> NextPossibleCoordinates((int x, int y)? from = null)
         {
+            // TODO: explicit previous tile
             from ??= Previous.Coordinates;
             
+            // TODO: make it clear: orientation of axis x and y
             var delta = (from.Value.x - Coordinates.x, from.Value.y - Coordinates.y);
             var newCoordinates = CharToNewTileDeltas[(Symbol, delta)].AddToAll(Coordinates).ToArray();
 
@@ -37,52 +40,51 @@ namespace Experiments
         }
 
         private static readonly ILookup<(char ch, (int dx, int dy) incomingDir), (int dx, int dy)> CharToNewTileDeltas =
-            MixOutputAndInput(GetDirections()).ToLookup(t => (t.ch, input: t.@from), t => t.to);
+            MixFromAndTo(GetDirections()).ToLookup(t => (t.ch, input: t.@from), t => t.to);
 
-        public override string ToString() => $"{nameof(Symbol)}: {Symbol}, {nameof(Coordinates)}: {Coordinates}, {nameof(Position)}: {Position}";
         private static IEnumerable<(char ch, (int dx, int dy) from, (int dx, int dy) to)> GetDirections()
         {
-            //            (0, 1)
-            //     (-1, 1)  |    (1, 1)
-            //              |
-            // (-1, 0) -----+----- (1, 0)
-            //              |
-            //    (-1, -1)  |   (1, -1)
-            //           (0, -1)
+            //           (0, -1)            --------->
+            //    (-1, -1)  |    (1, -1)    |        X
+            //              |               |
+            // (-1, 0) -----+----- (1, 0)   |
+            //              |               V Y
+            //     (-1, 1)  |   (1, 1)     
+            //            (0, 1)            
             
             var charToDeltaDirection = new (char ch, (int x, int y) from, (int x, int y) to)[]
             {
-                ('|', (0, -1), (0, 1)),
+                ('|', (0, 1), (0, -1)),
                 ('-', (-1, 0), (1, 0)),
-                ('X', (-1, -1), (1, 1)),
-                ('X', (1, -1), (-1, 1)),
-                ('+', (0, -1), (0, 1)),
-                ('+', (1, 0), (0, 1)),
+                ('X', (-1, 1), (1, -1)),
+                ('X', (1, 1), (-1, -1)),
+                ('+', (0, 1), (0, -1)),
+                ('+', (1, 0), (0, -1)),
                 ///////////////////
-                ('/', (-1, 0), (0, 1)),
-                ('/', (-1, 0), (1, 1)),
+                ('/', (-1, 0), (0, -1)),
+                ('/', (-1, 0), (1, -1)),
                 ///////////////////
-                ('/', (-1, -1), (0, 1)),
-                ('/', (-1, -1), (1, 1)),
-                ('/', (-1, -1), (1, 0)),
+                ('/', (-1, 1), (0, -1)),
+                ('/', (-1, 1), (1, -1)),
+                ('/', (-1, 1), (1, 0)),
                 //////////////////
-                ('/', (0, -1), (1, 1)),
-                ('/', (0, -1), (1, 0)),
+                ('/', (0, 1), (1, -1)),
+                ('/', (0, 1), (1, 0)),
             };
 
             foreach (var tpl in charToDeltaDirection)
             {
-                yield return tpl;
-
                 if (tpl.ch == '/')
-                    yield return ('\\', (-tpl.@from.x, -tpl.@from.y), (-tpl.to.x, -tpl.to.y));
+                    yield return ('\\', (-tpl.@from.x, tpl.@from.y), (-tpl.to.x, tpl.to.y)); // NOTE: reflection respective to axis y
 
                 if (tpl.ch == 'X' || tpl.ch == '+')
                     yield return ('S', tpl.@from, tpl.to);
+
+                yield return tpl;
             }
         }
 
-        private static IEnumerable<(char ch, T from, T to)> MixOutputAndInput<T>(IEnumerable<(char ch, T from, T to)> enumerable)
+        private static IEnumerable<(V ch, T from, T to)> MixFromAndTo<V, T>(IEnumerable<(V ch, T from, T to)> enumerable)
         {
             foreach (var tpl in enumerable)
             {
@@ -90,12 +92,16 @@ namespace Experiments
                 yield return (tpl.ch, tpl.to, tpl.from);
             }
         }
+        
+        public override string ToString() => $"{nameof(Symbol)}: '{Symbol}', {nameof(Coordinates)}: {Coordinates}, {nameof(Position)}: {Position}";
     }
 
     public class Train
     {
-        public Train(string str, int position = -1)
+        private readonly Field _field;
+        public Train( string str, Field field, int position = -1)
         {
+            _field = field;
             Position = position;
             Char = char.ToUpper(str[0]);
             Length = str.Length;
@@ -106,7 +112,6 @@ namespace Experiments
         public int Length { get; }
         public Tile? Head { get; set; }
         public Tile? Tail { get; set; }
-
         public int Position { get; set; } // TODO: Position should use Head tile
         public int TimeToWait { get; set; } = 0;
         public bool IsExpress => Char == 'X';
@@ -115,8 +120,8 @@ namespace Experiments
         {
             if (IsExpress || TimeToWait == 0)
             {
-                Head = Head.Next;
-                Tail = Tail.Next;
+                Head = IsClockwise ? Head.Next : Head.Previous;
+                Tail = IsClockwise ? Tail.Next : Tail.Previous;
 
                 TimeToWait = Head.IsStation ? Length : 0;
             }
@@ -124,7 +129,25 @@ namespace Experiments
             {
                 TimeToWait--;
             }
+
+            var actualLength = GetTiles().Count();
+            if (actualLength != Length)
+                throw new InvalidOperationException($"Train has invalid length: {actualLength}\nTrain info:\n{this}");
         }
+        
+        public IEnumerable<Tile> GetTiles()
+        {
+            for (var tile = Tail; tile != Head; tile = IsClockwise ? tile!.Next : tile!.Previous)
+                yield return tile;
+
+            yield return Head;
+        }
+        
+        public override string ToString() =>
+            $"{nameof(Char)}: {Char}, {nameof(Position)}: {Position}, {nameof(Length)}: {Length}, {nameof(TimeToWait)}: {TimeToWait}"
+            + $"\n{nameof(Head)}: {Head},\n{nameof(Tail)}: {Tail}";
+        
+        public string HighlightOnField(char placeholder) => _field.Highlight(GetTiles().ToArray(), placeholder, $"train: {this}");
     }
     
     public class Field
@@ -153,8 +176,8 @@ namespace Experiments
             ZeroTile = _field[0].FirstOrDefault(tile => tile.Symbol != ' ')
                        ?? throw new InvalidOperationException("Zero tile not found");
 
-            _charToTrain[char.ToUpper(firstTrain[0])] = new Train(firstTrain, firstTrainPos);
-            _charToTrain[char.ToUpper(secondTrain[0])] = new Train(secondTrain, secondTrainPos);
+            _charToTrain[char.ToUpper(firstTrain[0])] = new Train(firstTrain, this, firstTrainPos);
+            _charToTrain[char.ToUpper(secondTrain[0])] = new Train(secondTrain, this, secondTrainPos);
         }
 
         public Field CreateTrack()
@@ -172,14 +195,14 @@ namespace Experiments
 
             while (current != ZeroTile)
             {
+                current.Position = current.Previous.Position + 1;
+                
                 SetTrainInfo(current);
 
                 var nextTile = GetNextTile(current);
 
                 current.Next = nextTile;
                 nextTile.Previous = current;
-                nextTile.Position = current.Position + 1;
-
                 current = nextTile;
             }
 
@@ -198,7 +221,7 @@ namespace Experiments
                 throw new InvalidOperationException($"Invalid tile!\n{Highlight(current)}>");
 
             // NOTE: process crossing tile
-            if (nextTile.Position != -1)
+            if (nextTile.Position != -1 && nextTile != ZeroTile)
                 nextTile = new Tile(nextTile.Symbol, nextTile.Coordinates);
 
             return nextTile;
@@ -236,45 +259,49 @@ namespace Experiments
             }
         }
 
-        public bool CollisionDetected()
-        {
-            return Trains.SelectMany(GetCoordinates)
-                         .GroupBy(point => point)
-                         .Any(g => g.Count() > 1);
+        public bool CollisionDetected() =>
+            Trains.SelectMany(train => train.GetTiles())
+                  .GroupBy(tile => tile.Coordinates)
+                  .Any(g => g.Count() > 1);
 
-            IEnumerable<(int x, int y)> GetCoordinates(Train train)
-            {
-                for (var tile = train.Tail; tile != train.Head!.Next; tile = train.IsClockwise ? tile!.Next : tile!.Previous)
-                {
-                    yield return tile!.Coordinates;
-                }
-            }
-        }
+        private string Highlight(Tile tile) =>
+            Highlight(new[] { tile }, '@', $"current tile: {tile}");
 
-        public string Highlight(Tile tileToHighlight) =>
+        public string HighlightTrains() => Trains.First().HighlightOnField('#') + '\n' + Trains.Last().HighlightOnField('$');
+        
+        public string Highlight(Tile[] tilesToHighlight, char placeholder, string message) =>
             new StringBuilder()
                 .AppendJoin(null, _field.SelectMany(tiles =>
-                    tiles.Select(tile => tileToHighlight.Coordinates == tile.Coordinates ? '@' : tile.Symbol).Append('\n')))
-                .Append($"  @ - current tile: {tileToHighlight}\n")
+                    tiles.Select(tile =>
+                        tilesToHighlight.Any(t => t.Coordinates == tile.Coordinates) ? placeholder : tile.Symbol).Append('\n')))
+                .Append($"\t{placeholder} - {message}\n")
                 .ToString();
+
+        public override string ToString() => Highlight(Array.Empty<Tile>(), ' ', "current field\n");
     }
     
     public static class Dinglemouse
     {
+        public static bool HasPrint = false;
+        
         public static int TrainCrash(string trackStr, string aTrain, int aTrainPos, string bTrain, int bTrainPos, int limit)
         {
             var field = new Field(trackStr, aTrain, aTrainPos, bTrain, bTrainPos).CreateTrack();
 
+            int ans = -1;
             for (var i = 0; i < limit; i++)
             {
                 if (field.CollisionDetected())
-                    return i;
+                    ans = i;
 
                 foreach (var train in field.Trains)
                     train.Move();
             }
 
-            return -1;
+            if (HasPrint)
+                Console.WriteLine(field + field.HighlightTrains());
+
+            return ans;
         }
 
         public static IEnumerable<(int, int)> AddToAll(this IEnumerable<(int x, int y)> enumerable, (int x, int y) term) =>

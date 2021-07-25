@@ -9,13 +9,14 @@ namespace NTests
     public class DinglemouseTest
     {
         [Test]
-        [TestCase(3, "KataTrains_SimpleCircle.txt", "aaaA", -1, "Bbbbbbbbbbb", -1, 1000)]
-        [TestCase(5, "KataTrains_SimpleCrossing.txt", "Aaaa", -1, "bbbbbbbbbbB", -1, 1000)]
-        [TestCase(13, "KataTrains_SimpleStation.txt", "aaaA", -1, "Bbbbbbbbbbbbbb", -1, 1000)]
+        [TestCase(3, "KataTrains_SimpleCircle.txt", "Aaaa", -1, "bbbbbbbbbbB", -1, 1000)]
+        [TestCase(5, "KataTrains_SimpleCrossing.txt", "Aaaa", -1, "Bbbbbbbbbbb", -1, 1000)]
+        [TestCase(13, "KataTrains_SimpleStation.txt", "Aaaa", -1, "bbbbbbbbbbbbB", -1, 1000)]
         [TestCase(516, "KataTrains.txt", "Aaaa", 147, "Bbbbbbbbbbb", 288, 1000)]
         public void Example(
             int expected, string TestFile, string aTrain, int aTrainPos, string bTrain, int bTrainPos, int limit)
         {
+            Dinglemouse.HasPrint = true;
             string track = File.ReadAllText(Path.Combine(GetCurrentFileDir(), TestFile));
 
             Assert.AreEqual(expected, Dinglemouse.TrainCrash(track, aTrain, aTrainPos, bTrain, bTrainPos, limit));
