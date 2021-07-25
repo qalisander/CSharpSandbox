@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -57,9 +56,7 @@ namespace Experiments
                 ('|', (0, 1), (0, -1)),
                 ('-', (-1, 0), (1, 0)),
                 ('X', (-1, 1), (1, -1)),
-                ('X', (1, 1), (-1, -1)),
-                ('+', (0, 1), (0, -1)),
-                ('+', (1, 0), (0, -1)),
+                ('X', (-1, -1), (1, 1)),
                 ///////////////////
                 ('/', (-1, 0), (0, -1)),
                 ('/', (-1, 0), (1, -1)),
@@ -77,7 +74,13 @@ namespace Experiments
                 if (tpl.ch == '/')
                     yield return ('\\', (-tpl.@from.x, tpl.@from.y), (-tpl.to.x, tpl.to.y)); // NOTE: reflection respective to axis y
 
-                if (tpl.ch == 'X' || tpl.ch == '+')
+                if (tpl.ch == '-' || tpl.ch == '|')
+                {
+                    yield return ('+', tpl.from, tpl.to);
+                    yield return ('S', tpl.from, tpl.to);
+                }
+                
+                if (tpl.ch == 'X')
                     yield return ('S', tpl.@from, tpl.to);
 
                 yield return tpl;
@@ -123,7 +126,7 @@ namespace Experiments
                 Head = IsClockwise ? Head.Next : Head.Previous;
                 Tail = IsClockwise ? Tail.Next : Tail.Previous;
 
-                TimeToWait = Head.IsStation ? Length : 0;
+                TimeToWait = Head.IsStation ? Length - 1 : 0;
             }
             else
             {
@@ -132,7 +135,7 @@ namespace Experiments
 
             var actualLength = GetTiles().Count();
             if (actualLength != Length)
-                throw new InvalidOperationException($"Train has invalid length: {actualLength}\nTrain info:\n{this}");
+                throw new InvalidOperationException($"Train has invalid length: {actualLength}\nTrain info:\n{this}\n{HighlightOnField('#')}");
         }
         
         public IEnumerable<Tile> GetTiles()
@@ -292,7 +295,10 @@ namespace Experiments
             for (var i = 0; i < limit; i++)
             {
                 if (field.CollisionDetected())
+                {
                     ans = i;
+                    break;
+                }
 
                 foreach (var train in field.Trains)
                     train.Move();
