@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 // https://www.codewars.com/kata/59b47ff18bcb77a4d1000076/train/csharp
 namespace Experiments
@@ -23,19 +24,19 @@ namespace Experiments
 
         public IEnumerable<(int x, int y)> NextPossibleCoordinates((int x, int y)? from = null)
         {
-            var nextCoord =
-                (Coordinates.x - (from?.x ?? Previous.Coordinates.x), Coordinates.y - (from?.y ?? Previous.Coordinates.y));
+            from ??= Previous.Coordinates;
             
-            var newDirections = CharToNewDirections[(Symbol, nextCoord)].ToArray();
+            var delta = (from.Value.x - Coordinates.x, from.Value.y - Coordinates.y);
+            var newCoordinates = CharToNewTileDeltas[(Symbol, delta)].AddToAll(Coordinates).ToArray();
 
-            return newDirections.Any()
-                ? newDirections
+            return newCoordinates.Any()
+                ? newCoordinates
                 : char.IsLetter(Symbol) // NOTE: train or station
-                    ? CharToNewDirections[('-', nextCoord)].ToArray()
-                    : throw new InvalidOperationException("Symbol was not found in hashmap");
+                    ? CharToNewTileDeltas[('-', delta)].AddToAll(Coordinates).ToArray()
+                    : Enumerable.Empty<(int x, int y)>();
         }
 
-        private static readonly ILookup<(char ch, (int dx, int dy) incomingDir), (int dx, int dy)> CharToNewDirections =
+        private static readonly ILookup<(char ch, (int dx, int dy) incomingDir), (int dx, int dy)> CharToNewTileDeltas =
             MixOutputAndInput(GetDirections()).ToLookup(t => (t.ch, input: t.@from), t => t.to);
 
         public override string ToString() => $"{nameof(Symbol)}: {Symbol}, {nameof(Coordinates)}: {Coordinates}, {nameof(Position)}: {Position}";
@@ -140,9 +141,13 @@ namespace Experiments
 
         public Field(string track, string firstTrain, int firstTrainPos, string secondTrain, int secondTrainPos)
         {
-            _field = track
-                     .Split('\n')
-                     .Select((str, i) => str.ToCharArray().Select((ch, j) => new Tile(ch, (j, i))).ToArray())
+            var strings = track.Split(new []{'\r','\n'}, StringSplitOptions.RemoveEmptyEntries);
+            var maxLength = strings.Max(str => str.Length);
+
+            _field = strings
+                     .Select((str, i) =>
+                         str.PadRight(maxLength, ' ').ToCharArray().Select((ch, j) => 
+                             new Tile(ch, (j, i))).ToArray())
                      .ToArray();
 
             ZeroTile = _field[0].FirstOrDefault(tile => tile.Symbol != ' ')
@@ -157,7 +162,7 @@ namespace Experiments
             var current = TryGetTile((ZeroTile.Coordinates.x + 1, ZeroTile.Coordinates.y));
 
             if (current is null || current.Symbol != '-')
-                throw new InvalidOperationException($"Invalid track on tile: <{ZeroTile}>");
+                throw new InvalidOperationException($"Invalid tile!\n{Highlight(ZeroTile)}>");
 
             ZeroTile.Next = current;
             ZeroTile.Position = 0;
@@ -190,7 +195,7 @@ namespace Experiments
                                       tile != null && tile.NextPossibleCoordinates(current.Coordinates).Any());
 
             if (nextTile is null || nextTile.IsEmpty)
-                throw new InvalidOperationException($"Invalid tile: <{current}>");
+                throw new InvalidOperationException($"Invalid tile!\n{Highlight(current)}>");
 
             // NOTE: process crossing tile
             if (nextTile.Position != -1)
@@ -245,9 +250,16 @@ namespace Experiments
                 }
             }
         }
+
+        public string Highlight(Tile tileToHighlight) =>
+            new StringBuilder()
+                .AppendJoin(null, _field.SelectMany(tiles =>
+                    tiles.Select(tile => tileToHighlight.Coordinates == tile.Coordinates ? '@' : tile.Symbol).Append('\n')))
+                .Append($"  @ - current tile: {tileToHighlight}\n")
+                .ToString();
     }
     
-    public class Dinglemouse
+    public static class Dinglemouse
     {
         public static int TrainCrash(string trackStr, string aTrain, int aTrainPos, string bTrain, int bTrainPos, int limit)
         {
@@ -264,5 +276,8 @@ namespace Experiments
 
             return -1;
         }
+
+        public static IEnumerable<(int, int)> AddToAll(this IEnumerable<(int x, int y)> enumerable, (int x, int y) term) =>
+            enumerable.Select(tpl => (tpl.x + term.x, tpl.y + term.y));
     }
 }
