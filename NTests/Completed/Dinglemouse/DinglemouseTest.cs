@@ -1,9 +1,8 @@
 ﻿using System.IO;
 using System.Runtime.CompilerServices;
-using Experiments;
 using NUnit.Framework;
 
-namespace NTests
+namespace NTests.Completed.Dinglemouse
 {
     [TestFixture]
     public class DinglemouseTest
@@ -22,10 +21,10 @@ namespace NTests
         public void Example(
             int expected, string TestFile, string aTrain, int aTrainPos, string bTrain, int bTrainPos, int limit)
         {
-            Dinglemouse.HasPrint = true;
+            Experiments.Completed.Dinglemouse.HasPrint = true;
             string track = File.ReadAllText(Path.Combine(GetCurrentFileDir(), TestFile));
 
-            Assert.AreEqual(expected, Dinglemouse.TrainCrash(track, aTrain, aTrainPos, bTrain, bTrainPos, limit));
+            Assert.AreEqual(expected, Experiments.Completed.Dinglemouse.TrainCrash(track, aTrain, aTrainPos, bTrain, bTrainPos, limit));
         }
 
         private string GetCurrentFileDir([CallerFilePath] string path = null) => Path.GetDirectoryName(path);

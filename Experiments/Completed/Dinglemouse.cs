@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 
 // https://www.codewars.com/kata/59b47ff18bcb77a4d1000076/train/csharp
-namespace Experiments
+namespace Experiments.Completed
 {
     public class Tile
     {
@@ -25,15 +25,23 @@ namespace Experiments
         public Tile? Next { get; set; }
         public int Position { get; set; } = -1;
 
-        public IEnumerable<Tile?> NextPossibleTile(Tile tileFrom)
+        public IEnumerable<Tile?> NextPossibleTile(Tile fromTile)
         {
-            var slantingSymbols = new[] { '/', '\\', 'X' };
-            var verticalAndHorizontalSymbols = new []{ '|', '-', '+'};
-            
-            var delta = (tileFrom.Coordinates.x - Coordinates.x, tileFrom.Coordinates.y - Coordinates.y);
-            var newTiles = CharToNewTileDeltas[(Symbol, delta)].AddToAll(Coordinates).Select(_field.TryGetTile);
+            return CharToNewTileDeltas[(Symbol, delta: Delta(this, fromTile))]
+                   .AddToAll(Coordinates)
+                   .Select(_field.TryGetTile)
+                   .Where(nextTile => nextTile != null)
+                   .Where(nextTile => IsDiagonal(this) && IsDiagonalDelta(Delta(this, nextTile)) && IsDiagonal(nextTile)
+                                      || IsDiagonal(this) && !IsDiagonalDelta(Delta(this, nextTile)) && !IsDiagonal(nextTile)
+                                      || IsVerticalOrHorizontal(this));
 
-            return newTiles;
+            static bool IsVerticalOrHorizontal(Tile tile) => "S|-+".Contains(tile.Symbol);
+            static bool IsDiagonal(Tile tile) => "S/\\X".Contains(tile.Symbol);
+            
+            static (int dx, int dy) Delta(Tile from, Tile to) => 
+                (to.Coordinates.x - from.Coordinates.x, to.Coordinates.y - from.Coordinates.y);
+
+            bool IsDiagonalDelta((int dx, int dy) delta) => (delta.dx + delta.dy) % 2 == 0;
         }
 
         private static readonly ILookup<(char ch, (int dx, int dy) incomingDir), (int dx, int dy)> CharToNewTileDeltas =
