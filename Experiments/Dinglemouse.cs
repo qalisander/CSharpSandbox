@@ -9,8 +9,10 @@ namespace Experiments
 {
     public class Tile
     {
-        public Tile(char symbol, (int x, int y) coordinates)
+        private readonly Field _field;
+        public Tile(char symbol, (int x, int y) coordinates, Field field)
         {
+            _field = field;
             Symbol = symbol;
             Coordinates = coordinates;
         }
@@ -23,16 +25,15 @@ namespace Experiments
         public Tile? Next { get; set; }
         public int Position { get; set; } = -1;
 
-        public IEnumerable<(int x, int y)> NextPossibleCoordinates((int x, int y) from)
+        public IEnumerable<Tile?> NextPossibleTile(Tile tileFrom)
         {
-            var delta = (from.x - Coordinates.x, from.y - Coordinates.y);
-            var newCoordinates = CharToNewTileDeltas[(Symbol, delta)].AddToAll(Coordinates).ToArray();
+            var slantingSymbols = new[] { '/', '\\', 'X' };
+            var verticalAndHorizontalSymbols = new []{ '|', '-', '+'};
+            
+            var delta = (tileFrom.Coordinates.x - Coordinates.x, tileFrom.Coordinates.y - Coordinates.y);
+            var newTiles = CharToNewTileDeltas[(Symbol, delta)].AddToAll(Coordinates).Select(_field.TryGetTile);
 
-            return newCoordinates.Any()
-                ? newCoordinates
-                : char.IsLetter(Symbol) // NOTE: train or station
-                    ? CharToNewTileDeltas[('-', delta)].AddToAll(Coordinates).ToArray()
-                    : Enumerable.Empty<(int x, int y)>();
+            return newTiles;
         }
 
         private static readonly ILookup<(char ch, (int dx, int dy) incomingDir), (int dx, int dy)> CharToNewTileDeltas =
@@ -47,7 +48,7 @@ namespace Experiments
             //              |               V Y
             //     (-1, 1)  |   (1, 1)     
             //            (0, 1)            
-            
+
             var charToDeltaDirection = new (char ch, (int x, int y) from, (int x, int y) to)[]
             {
                 ('|', (0, 1), (0, -1)),
@@ -55,12 +56,12 @@ namespace Experiments
                 ('X', (-1, 1), (1, -1)),
                 ('X', (-1, -1), (1, 1)),
                 ///////////////////
-                ('/', (-1, 0), (0, -1)),
-                ('/', (-1, 0), (1, -1)),
-                ///////////////////
-                ('/', (-1, 1), (0, -1)),
                 ('/', (-1, 1), (1, -1)),
                 ('/', (-1, 1), (1, 0)),
+                ('/', (-1, 1), (0, -1)),
+                ///////////////////
+                ('/', (-1, 0), (0, -1)),
+                ('/', (-1, 0), (1, -1)),
                 //////////////////
                 ('/', (0, 1), (1, -1)),
                 ('/', (0, 1), (1, 0)),
@@ -83,7 +84,6 @@ namespace Experiments
                 yield return tpl;
             }
         }
-
         private static IEnumerable<(V ch, T from, T to)> MixFromAndTo<V, T>(IEnumerable<(V ch, T from, T to)> enumerable)
         {
             foreach (var tpl in enumerable)
@@ -99,24 +99,25 @@ namespace Experiments
     public class Train
     {
         private readonly Field _field;
-        public Train( string str, Field field, int position = -1)
+        public Train( string str, Field field, int initPosition = -1)
         {
             _field = field;
-            Position = position;
+            InitPosition = initPosition;
             Char = char.ToUpper(str[0]);
             Length = str.Length;
             IsClockwise = char.IsLower(str[0]);
-            Head = field.GetByPosition(position);
-            Tail = field.GetByPosition(IsClockwise ? position - Length + 1: position + Length - 1);
+            Head = field.GetByPosition(initPosition);
+            Tail = field.GetByPosition(IsClockwise ? initPosition - Length + 1: initPosition + Length - 1);
         }
         public char Char { get; }
         public bool IsClockwise { get; }
         public int Length { get; }
         public Tile? Head { get; set; }
         public Tile? Tail { get; set; }
-        public int Position { get; set; } // TODO: Position should use Head tile
+        public int InitPosition { get; }
         public int TimeToWait { get; set; } = 0;
         public bool IsExpress => Char == 'X';
+        public string HighlightedOnFieldStr => _field.Highlight(GetTiles().ToArray(), Char, $"train: {this}");
 
         public void Move()
         {
@@ -134,28 +135,20 @@ namespace Experiments
 
             var actualLength = GetTiles().Count();
             if (actualLength != Length)
-                throw new InvalidOperationException($"Train has invalid length: {actualLength}\nTrain info:\n{HighlightOnField()}");
+                throw new InvalidOperationException($"Train has invalid length: {actualLength}\nTrain info:\n{HighlightedOnFieldStr}");
         }
-        
-        public IEnumerable<Tile> GetTiles()
-        {
-            for (var tile = Tail; tile != Head; tile = IsClockwise ? tile!.Next : tile!.Previous)
-                yield return tile;
 
-            yield return Head;
-        }
-        
+        public IEnumerable<Tile> GetTiles() => _field.GetChaindedTiles(Tail, Head, IsClockwise);
+
         public override string ToString() =>
-            $"{nameof(Char)}: {Char}, {nameof(Position)}: {Position}, {nameof(Length)}: {Length}, {nameof(TimeToWait)}: {TimeToWait}"
+            $"{nameof(Char)}: {Char}, {nameof(InitPosition)}: {InitPosition}, {nameof(Length)}: {Length}, {nameof(TimeToWait)}: {TimeToWait}"
             + $"\n{nameof(Head)}: {Head},\n{nameof(Tail)}: {Tail}";
-        
-        public string HighlightOnField() => _field.Highlight(GetTiles().ToArray(), Char, $"train: {this}");
     }
     
     public class Field
     {
         private readonly Tile[][] _field;
-        private Tile? TryGetTile((int x, int y) point) => IsInBounds(point) ? _field[point.y][point.x] : null;
+        public Tile? TryGetTile((int x, int y) point) => IsInBounds(point) ? _field[point.y][point.x] : null;
         private bool IsInBounds((int x, int y) point) =>
             0 <= point.y && point.y < _field.Length && 0 <= point.x && point.x < _field[0].Length;
 
@@ -165,6 +158,9 @@ namespace Experiments
         public IEnumerable<Train> Trains => _trains;
         public int TotalLength => ZeroTile.Previous.Position + 1;
 
+        public string ChainedTilesStr =>
+            Highlight(GetChaindedTiles(ZeroTile, ZeroTile.Previous).ToArray(), '$', "Chained tiles:");
+
         public Field(string track)
         {
             var strings = track.Split(new []{'\r','\n'}, StringSplitOptions.RemoveEmptyEntries);
@@ -173,7 +169,7 @@ namespace Experiments
             _field = strings
                      .Select((str, i) =>
                          str.PadRight(maxLength, ' ').ToCharArray().Select((ch, j) => 
-                             new Tile(ch, (j, i))).ToArray())
+                             new Tile(ch, (j, i), this)).ToArray())
                      .ToArray();
 
             ZeroTile = _field[0].FirstOrDefault(tile => tile.Symbol != ' ')
@@ -210,17 +206,16 @@ namespace Experiments
         private Tile GetNextTile(Tile current)
         {
 
-            var nextTile = current.NextPossibleCoordinates(current.Previous!.Coordinates)
-                                  .Select(TryGetTile)
+            var nextTile = current.NextPossibleTile(current.Previous!)
                                   .FirstOrDefault(tile =>
-                                      tile != null && tile.NextPossibleCoordinates(current.Coordinates).Any());
+                                      tile != null && tile.NextPossibleTile(current).Any());
 
             if (nextTile is null || nextTile.IsEmpty)
                 throw new InvalidOperationException($"Invalid tile!\n{Highlight(current)}>");
 
             // NOTE: processing crossing tile
             if (nextTile.Position != -1 && nextTile != ZeroTile)
-                nextTile = new Tile(nextTile.Symbol, nextTile.Coordinates);
+                nextTile = new Tile(nextTile.Symbol, nextTile.Coordinates, this);
 
             return nextTile;
         }
@@ -241,7 +236,7 @@ namespace Experiments
             Highlight(new[] { tile }, '@', $"current tile: {tile}");
 
         public string HighlightTrains() =>
-            Trains.First().HighlightOnField() + '\n' + Trains.Last().HighlightOnField();
+            Trains.First().HighlightedOnFieldStr + '\n' + Trains.Last().HighlightedOnFieldStr;
         
         public string Highlight(Tile[] tilesToHighlight, char placeholder, string message) =>
             new StringBuilder()
@@ -259,6 +254,14 @@ namespace Experiments
                 if (tile.Position == position)
                     return tile;
         }
+        
+        public IEnumerable<Tile> GetChaindedTiles(Tile from, Tile iclusiveTo, bool IsClockwise = true)
+        {
+            for (var tile = from; tile != iclusiveTo; tile = IsClockwise ? tile!.Next : tile!.Previous)
+                yield return tile;
+
+            yield return iclusiveTo;
+        }
 
         public override string ToString() => Highlight(Array.Empty<Tile>(), ' ', "current field\n");
     }
@@ -269,18 +272,18 @@ namespace Experiments
         
         public static int TrainCrash(string trackStr, string aTrain, int aTrainPos, string bTrain, int bTrainPos, int limit)
         {
-            Console.WriteLine(new string('-', 25)
+            Console.WriteLine(new string('_', 40)
                               + '\n'
                               + "InputInfo:\n"
                               + trackStr
                               + $"\naTrain: {aTrain}, aTrainPos: {aTrainPos}, bTrain: {bTrain}, bTrainPos: {bTrainPos}, limit: {limit}\n"
-                              + new string('-', 10)
+                              + new string('_', 20)
                               + '\n');
             
             var field = new Field(trackStr).CreateTrack().SetTrainInfo(aTrain, aTrainPos, bTrain, bTrainPos);
 
             int ans = -1;
-            for (var i = 0; i < limit; i++)
+            for (var i = 0; i <= limit; i++)
             {
                 if (field.CollisionDetected())
                 {
@@ -293,7 +296,7 @@ namespace Experiments
             }
 
             if (HasPrint)
-                Console.WriteLine(field + field.HighlightTrains());
+                Console.WriteLine(field + field.ChainedTilesStr + field.HighlightTrains());
 
             return ans;
         }
