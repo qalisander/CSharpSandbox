@@ -280,6 +280,8 @@ namespace Experiments.Completed
         
         public static int TrainCrash(string trackStr, string aTrain, int aTrainPos, string bTrain, int bTrainPos, int limit)
         {
+            // NOTE: use Console.SetCursorPosition to animate
+            
             Console.WriteLine(new string('_', 40)
                               + '\n'
                               + "InputInfo:\n"
