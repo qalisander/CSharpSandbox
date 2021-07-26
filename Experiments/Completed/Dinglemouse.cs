@@ -44,8 +44,7 @@ namespace Experiments.Completed
             bool IsDiagonalDelta((int dx, int dy) delta) => (delta.dx + delta.dy) % 2 == 0;
         }
 
-        private static readonly ILookup<(char ch, (int dx, int dy) incomingDir), (int dx, int dy)> CharToNewTileDeltas =
-            MixFromAndTo(GetDirections()).ToLookup(t => (t.ch, input: t.@from), t => t.to);
+        private static readonly ILookup<(char ch, (int dx, int dy) incomingDir), (int dx, int dy)> CharToNewTileDeltas = GetDirections().MixFromAndTo().ToLookup(t => (t.ch, input: t.@from), t => t.to);
 
         private static IEnumerable<(char ch, (int dx, int dy) from, (int dx, int dy) to)> GetDirections()
         {
@@ -92,15 +91,7 @@ namespace Experiments.Completed
                 yield return tpl;
             }
         }
-        private static IEnumerable<(V ch, T from, T to)> MixFromAndTo<V, T>(IEnumerable<(V ch, T from, T to)> enumerable)
-        {
-            foreach (var tpl in enumerable)
-            {
-                yield return (tpl.ch, tpl.from, tpl.to);
-                yield return (tpl.ch, tpl.to, tpl.from);
-            }
-        }
-        
+
         public override string ToString() => $"{nameof(Symbol)}: '{Symbol}', {nameof(Coordinates)}: {Coordinates}, {nameof(Position)}: {Position}";
     }
 
@@ -167,7 +158,7 @@ namespace Experiments.Completed
         public int TotalLength => ZeroTile.Previous.Position + 1;
 
         public string ChainedTilesStr =>
-            Highlight(GetChaindedTiles(ZeroTile, ZeroTile.Previous).ToArray(), '$', "Chained tiles:");
+            Highlight(GetChaindedTiles(ZeroTile, ZeroTile.Previous).ToArray(), '$', "Chained tiles:\n");
 
         public Field(string track)
         {
@@ -313,5 +304,14 @@ namespace Experiments.Completed
 
         public static IEnumerable<(int, int)> AddToAll(this IEnumerable<(int x, int y)> enumerable, (int x, int y) term) =>
             enumerable.Select(tpl => (tpl.x + term.x, tpl.y + term.y));
+        
+        public static IEnumerable<(V ch, T from, T to)> MixFromAndTo<V, T>(this IEnumerable<(V ch, T from, T to)> enumerable)
+        {
+            foreach (var tpl in enumerable)
+            {
+                yield return (tpl.ch, tpl.@from, tpl.to);
+                yield return (tpl.ch, tpl.to, tpl.@from);
+            }
+        }
     }
 }
