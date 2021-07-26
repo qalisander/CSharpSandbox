@@ -1,4 +1,4 @@
-﻿#nullable disable
+﻿#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -134,7 +134,7 @@ namespace Experiments
 
             var actualLength = GetTiles().Count();
             if (actualLength != Length)
-                throw new InvalidOperationException($"Train has invalid length: {actualLength}\nTrain info:\n{HighlightOnField('#')}");
+                throw new InvalidOperationException($"Train has invalid length: {actualLength}\nTrain info:\n{HighlightOnField()}");
         }
         
         public IEnumerable<Tile> GetTiles()
@@ -149,7 +149,7 @@ namespace Experiments
             $"{nameof(Char)}: {Char}, {nameof(Position)}: {Position}, {nameof(Length)}: {Length}, {nameof(TimeToWait)}: {TimeToWait}"
             + $"\n{nameof(Head)}: {Head},\n{nameof(Tail)}: {Tail}";
         
-        public string HighlightOnField(char placeholder) => _field.Highlight(GetTiles().ToArray(), placeholder, $"train: {this}");
+        public string HighlightOnField() => _field.Highlight(GetTiles().ToArray(), Char, $"train: {this}");
     }
     
     public class Field
@@ -192,7 +192,7 @@ namespace Experiments
             
             current.Previous = ZeroTile;
             current.Position = 1;
-
+            
             while (current != ZeroTile)
             {
                 current.Position = current.Previous.Position + 1;
@@ -207,13 +207,6 @@ namespace Experiments
             return this;
         }
 
-        public Field SetTrainInfo(string firstTrain, int firstTrainPos, string secondTrain, int secondTrainPos)
-        {
-            _charToTrain[char.ToUpper(firstTrain[0])] = new Train(firstTrain, this, firstTrainPos);
-            _charToTrain[char.ToUpper(secondTrain[0])] = new Train(secondTrain, this, secondTrainPos);
-            return this;
-        }
-        
         private Tile GetNextTile(Tile current)
         {
 
@@ -225,11 +218,18 @@ namespace Experiments
             if (nextTile is null || nextTile.IsEmpty)
                 throw new InvalidOperationException($"Invalid tile!\n{Highlight(current)}>");
 
-            // NOTE: process crossing tile
+            // NOTE: processing crossing tile
             if (nextTile.Position != -1 && nextTile != ZeroTile)
                 nextTile = new Tile(nextTile.Symbol, nextTile.Coordinates);
 
             return nextTile;
+        }
+        
+        public Field SetTrainInfo(string firstTrain, int firstTrainPos, string secondTrain, int secondTrainPos)
+        {
+            _charToTrain[char.ToUpper(firstTrain[0])] = new Train(firstTrain, this, firstTrainPos);
+            _charToTrain[char.ToUpper(secondTrain[0])] = new Train(secondTrain, this, secondTrainPos);
+            return this;
         }
 
         public bool CollisionDetected() =>
@@ -240,7 +240,8 @@ namespace Experiments
         private string Highlight(Tile tile) =>
             Highlight(new[] { tile }, '@', $"current tile: {tile}");
 
-        public string HighlightTrains() => Trains.First().HighlightOnField('#') + '\n' + Trains.Last().HighlightOnField('$');
+        public string HighlightTrains() =>
+            Trains.First().HighlightOnField() + '\n' + Trains.Last().HighlightOnField();
         
         public string Highlight(Tile[] tilesToHighlight, char placeholder, string message) =>
             new StringBuilder()
@@ -252,7 +253,7 @@ namespace Experiments
 
         public Tile GetByPosition(int position)
         {
-            position = position + TotalLength % TotalLength;
+            position = (position + TotalLength) % TotalLength;
             
             for (Tile tile = ZeroTile;; tile = tile.Next)
                 if (tile.Position == position)
@@ -268,6 +269,10 @@ namespace Experiments
         
         public static int TrainCrash(string trackStr, string aTrain, int aTrainPos, string bTrain, int bTrainPos, int limit)
         {
+            Console.WriteLine("InputInfo:\n"
+                              + trackStr
+                              + $"\naTrain: {aTrain}, aTrainPos: {aTrainPos}, bTrain: {bTrain}, bTrainPos: {bTrainPos}, limit: {limit}\n");
+            
             var field = new Field(trackStr).CreateTrack().SetTrainInfo(aTrain, aTrainPos, bTrain, bTrainPos);
 
             int ans = -1;
