@@ -13,6 +13,10 @@ namespace NTests
         [TestCase(5, "KataTrains_SimpleCrossing.txt", "aaaA", 31, "Bbbbbbbbbbb", 7, 1000)]
         [TestCase(13, "KataTrains_SimpleStation.txt", "Aaaa", 6, "bbbbbbbbbbbbbB", 36, 1000)]
         [TestCase(516, "KataTrains.txt", "Aaaa", 147, "Bbbbbbbbbbb", 288, 1000)]
+        [TestCase(-1, "KataTrains_NearMissSelf.txt", "aA", 10, "oooooooooooooooooooooO", 70, 200)]
+        [TestCase(-1, "KataTrains_NoCrashOTricky.txt", "aaaA", 15, "bbbB", 5, 100)]
+        [TestCase(0, "KataTrains_Random.txt", "xxxxxxX", 11, "Cccccccccc", 42, 2000)]
+        [TestCase(0, "KataTrains_CrashBeforeStarted.txt", "oO", 10, "oO", 10, 100)]
         public void Example(
             int expected, string TestFile, string aTrain, int aTrainPos, string bTrain, int bTrainPos, int limit)
         {
