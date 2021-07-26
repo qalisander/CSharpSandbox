@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable disable
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -109,6 +110,8 @@ namespace Experiments
             Char = char.ToUpper(str[0]);
             Length = str.Length;
             IsClockwise = char.IsLower(str[0]);
+            Head = field.GetByPosition(position);
+            Tail = field.GetByPosition(IsClockwise ? position - Length + 1: position + Length - 1);
         }
         public char Char { get; }
         public bool IsClockwise { get; }
@@ -135,7 +138,7 @@ namespace Experiments
 
             var actualLength = GetTiles().Count();
             if (actualLength != Length)
-                throw new InvalidOperationException($"Train has invalid length: {actualLength}\nTrain info:\n{this}\n{HighlightOnField('#')}");
+                throw new InvalidOperationException($"Train has invalid length: {actualLength}\nTrain info:\n{HighlightOnField('#')}");
         }
         
         public IEnumerable<Tile> GetTiles()
@@ -164,8 +167,9 @@ namespace Experiments
 
         private readonly Dictionary<char, Train> _charToTrain = new Dictionary<char, Train>();
         public IEnumerable<Train> Trains => _charToTrain.Values;
+        public int TotalLength => ZeroTile.Previous.Position + 1;
 
-        public Field(string track, string firstTrain, int firstTrainPos, string secondTrain, int secondTrainPos)
+        public Field(string track)
         {
             var strings = track.Split(new []{'\r','\n'}, StringSplitOptions.RemoveEmptyEntries);
             var maxLength = strings.Max(str => str.Length);
@@ -178,9 +182,6 @@ namespace Experiments
 
             ZeroTile = _field[0].FirstOrDefault(tile => tile.Symbol != ' ')
                        ?? throw new InvalidOperationException("Zero tile not found");
-
-            _charToTrain[char.ToUpper(firstTrain[0])] = new Train(firstTrain, this, firstTrainPos);
-            _charToTrain[char.ToUpper(secondTrain[0])] = new Train(secondTrain, this, secondTrainPos);
         }
 
         public Field CreateTrack()
@@ -199,8 +200,6 @@ namespace Experiments
             while (current != ZeroTile)
             {
                 current.Position = current.Previous.Position + 1;
-                
-                SetTrainInfo(current);
 
                 var nextTile = GetNextTile(current);
 
@@ -209,6 +208,13 @@ namespace Experiments
                 current = nextTile;
             }
 
+            return this;
+        }
+
+        public Field SetTrainInfo(string firstTrain, int firstTrainPos, string secondTrain, int secondTrainPos)
+        {
+            _charToTrain[char.ToUpper(firstTrain[0])] = new Train(firstTrain, this, firstTrainPos);
+            _charToTrain[char.ToUpper(secondTrain[0])] = new Train(secondTrain, this, secondTrainPos);
             return this;
         }
         
@@ -230,41 +236,9 @@ namespace Experiments
             return nextTile;
         }
 
-        private void SetTrainInfo(Tile current)
-        {
-            if (!_charToTrain.TryGetValue(char.ToUpper(current.Symbol), out var train))
-                return;
-
-            var isTrainHead = char.IsUpper(current.Symbol);
-
-            if (isTrainHead && current.Position != train.Position)
-            {
-                train.Position = train.Position == -1
-                    ? current.Position
-                    : throw new InvalidOperationException(
-                        $"Train <{train.Char}> expected to have position: {train.Position} but has: {current.Position}");
-            }
-
-            if (isTrainHead)
-            {
-                train.Head = current;
-
-                if (train.Length == 1)
-                    train.Tail = current;
-            }
-            else if (train.Head is null)
-            {
-                train.Tail ??= current;
-            }
-            else
-            {
-                train.Tail = current;
-            }
-        }
-
         public bool CollisionDetected() =>
             Trains.SelectMany(train => train.GetTiles())
-                  .GroupBy(tile => tile.Coordinates)
+                  .GroupBy(tile => (tile.Coordinates, 1))
                   .Any(g => g.Count() > 1);
 
         private string Highlight(Tile tile) =>
@@ -280,6 +254,15 @@ namespace Experiments
                 .Append($"\t{placeholder} - {message}\n")
                 .ToString();
 
+        public Tile GetByPosition(int position)
+        {
+            position = position + TotalLength % TotalLength;
+            
+            for (Tile tile = ZeroTile;; tile = tile.Next)
+                if (tile.Position == position)
+                    return tile;
+        }
+
         public override string ToString() => Highlight(Array.Empty<Tile>(), ' ', "current field\n");
     }
     
@@ -289,7 +272,7 @@ namespace Experiments
         
         public static int TrainCrash(string trackStr, string aTrain, int aTrainPos, string bTrain, int bTrainPos, int limit)
         {
-            var field = new Field(trackStr, aTrain, aTrainPos, bTrain, bTrainPos).CreateTrack();
+            var field = new Field(trackStr).CreateTrack().SetTrainInfo(aTrain, aTrainPos, bTrain, bTrainPos);
 
             int ans = -1;
             for (var i = 0; i < limit; i++)
