@@ -161,8 +161,8 @@ namespace Experiments
 
         private Tile ZeroTile { get; }
 
-        private readonly Dictionary<char, Train> _charToTrain = new Dictionary<char, Train>();
-        public IEnumerable<Train> Trains => _charToTrain.Values;
+        private readonly List<Train> _trains = new List<Train>();
+        public IEnumerable<Train> Trains => _trains;
         public int TotalLength => ZeroTile.Previous.Position + 1;
 
         public Field(string track)
@@ -227,8 +227,8 @@ namespace Experiments
         
         public Field SetTrainInfo(string firstTrain, int firstTrainPos, string secondTrain, int secondTrainPos)
         {
-            _charToTrain[char.ToUpper(firstTrain[0])] = new Train(firstTrain, this, firstTrainPos);
-            _charToTrain[char.ToUpper(secondTrain[0])] = new Train(secondTrain, this, secondTrainPos);
+            _trains.Add(new Train(firstTrain, this, firstTrainPos));
+            _trains.Add(new Train(secondTrain, this, secondTrainPos));
             return this;
         }
 
@@ -269,9 +269,13 @@ namespace Experiments
         
         public static int TrainCrash(string trackStr, string aTrain, int aTrainPos, string bTrain, int bTrainPos, int limit)
         {
-            Console.WriteLine("InputInfo:\n"
+            Console.WriteLine(new string('-', 25)
+                              + '\n'
+                              + "InputInfo:\n"
                               + trackStr
-                              + $"\naTrain: {aTrain}, aTrainPos: {aTrainPos}, bTrain: {bTrain}, bTrainPos: {bTrainPos}, limit: {limit}\n");
+                              + $"\naTrain: {aTrain}, aTrainPos: {aTrainPos}, bTrain: {bTrain}, bTrainPos: {bTrainPos}, limit: {limit}\n"
+                              + new string('-', 10)
+                              + '\n');
             
             var field = new Field(trackStr).CreateTrack().SetTrainInfo(aTrain, aTrainPos, bTrain, bTrainPos);
 
