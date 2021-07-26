@@ -23,13 +23,9 @@ namespace Experiments
         public Tile? Next { get; set; }
         public int Position { get; set; } = -1;
 
-        public IEnumerable<(int x, int y)> NextPossibleCoordinates((int x, int y)? from = null)
+        public IEnumerable<(int x, int y)> NextPossibleCoordinates((int x, int y) from)
         {
-            // TODO: explicit previous tile
-            from ??= Previous.Coordinates;
-            
-            // TODO: make it clear: orientation of axis x and y
-            var delta = (from.Value.x - Coordinates.x, from.Value.y - Coordinates.y);
+            var delta = (from.x - Coordinates.x, from.y - Coordinates.y);
             var newCoordinates = CharToNewTileDeltas[(Symbol, delta)].AddToAll(Coordinates).ToArray();
 
             return newCoordinates.Any()
@@ -221,7 +217,7 @@ namespace Experiments
         private Tile GetNextTile(Tile current)
         {
 
-            var nextTile = current.NextPossibleCoordinates()
+            var nextTile = current.NextPossibleCoordinates(current.Previous!.Coordinates)
                                   .Select(TryGetTile)
                                   .FirstOrDefault(tile =>
                                       tile != null && tile.NextPossibleCoordinates(current.Coordinates).Any());
