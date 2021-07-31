@@ -7,15 +7,15 @@ namespace Experiments.Completed
     {
         public static string Part(long n)
         {
-            var ans = PartRec((int)n, new int[n + 1][]).OrderBy(x => x).ToArray();
+            var ans = PartRec((int)n, new int[n + 1][]).ToArray();
 
             return $"Range: {ans.Max() - ans.Min()} Average: {ans.Average():.00} Median: {Median(ans):.00}";
 
-            static IEnumerable<int> PartRec(int arg, int [][] memory) => 
+            static IEnumerable<int> PartRec(int arg, int[]?[] memory) => 
                 memory[arg] ?? (memory[arg] = Enumerable.Range(arg, 1)
                     .Union(Enumerable.Range(1, arg / 2)
-                        .SelectMany(i => PartRec(arg - i, memory).Select(x => x * i))
-                        .Distinct())
+                        .SelectMany(i => PartRec(arg - i, memory).Select(x => x * i)))
+                    .OrderBy(x => x)
                     .ToArray());
 
             static double Median(IList<int> list) => list.Count % 2 == 0
