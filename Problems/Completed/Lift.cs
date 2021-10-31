@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Experiments.Completed
+namespace Problems.Completed
 {
     // NOTE: https://www.codewars.com/kata/58905bfa1decb981da00009e/train/csharp
     public class Lift

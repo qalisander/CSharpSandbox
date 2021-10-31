@@ -1,5 +1,5 @@
 ﻿using BenchmarkDotNet.Running;
-using Experiments.Benchmark;
+using Problems.Benchmark;
 using NUnit.Framework;
 
 namespace NTests.BenchTests

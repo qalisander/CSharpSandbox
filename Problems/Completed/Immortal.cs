@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Numerics;
 
-namespace Experiments.Completed
+namespace Problems.Completed
 {
     // https://www.codewars.com/kata/59568be9cc15b57637000054
     public static class Immortal

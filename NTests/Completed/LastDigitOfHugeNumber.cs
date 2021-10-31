@@ -1,4 +1,4 @@
-﻿using Experiments.Completed;
+﻿using Problems.Completed;
 using Newtonsoft.Json;
 using NUnit.Framework;
 
@@ -27,7 +27,7 @@ namespace NTests.Completed
         [TestCase(new [] { 2, 2 }, 4)]
         public void SampleTest(int [] arr, int expected)
         {
-            Assert.AreEqual(expected, Experiments.Completed.LastDigitOfHugeNumber.LastDigit(arr));
+            Assert.AreEqual(expected, Problems.Completed.LastDigitOfHugeNumber.LastDigit(arr));
         }
 
         [Test]
@@ -78,7 +78,7 @@ namespace NTests.Completed
         public void GetPeriodsTest(string expected, int num)
         {
             Assert.AreEqual(expected, 
-                JsonConvert.SerializeObject(Experiments.Completed.LastDigitOfHugeNumber.GetPeriods(num)));
+                JsonConvert.SerializeObject(Problems.Completed.LastDigitOfHugeNumber.GetPeriods(num)));
         }
 
         [Test]
@@ -88,7 +88,7 @@ namespace NTests.Completed
         [TestCase("[0]", 2, 4)]
         public void GetPeriodSimpleTest(string expected, int num, int mod)
         {
-            Assert.AreEqual(expected, JsonConvert.SerializeObject(Experiments.Completed.LastDigitOfHugeNumber.GetPeriod(num, mod)));
+            Assert.AreEqual(expected, JsonConvert.SerializeObject(Problems.Completed.LastDigitOfHugeNumber.GetPeriod(num, mod)));
         }
 
         [Test]
@@ -105,42 +105,42 @@ namespace NTests.Completed
         [Test]
         public void GetPeriodsStraightforwardTest()
         {
-            var periods = Experiments.Completed.LastDigitOfHugeNumber.GetPeriodsStraightforward();
+            var periods = Problems.Completed.LastDigitOfHugeNumber.GetPeriodsStraightforward();
         }
 
         [Test]
         public void GetPeriodsDoWhileTest()
         {
             Assert.AreEqual(
-                JsonConvert.SerializeObject(Experiments.Completed.LastDigitOfHugeNumber.GetPeriodsStraightforward()),
-                JsonConvert.SerializeObject(Experiments.Completed.LastDigitOfHugeNumber.GetPeriods()));
+                JsonConvert.SerializeObject(Problems.Completed.LastDigitOfHugeNumber.GetPeriodsStraightforward()),
+                JsonConvert.SerializeObject(Problems.Completed.LastDigitOfHugeNumber.GetPeriods()));
         }
 
         [Test]
         public void GetPeriodsIterTest()
         {
             Assert.AreEqual(
-                JsonConvert.SerializeObject(Experiments.Completed.LastDigitOfHugeNumber.GetPeriodsStraightforward()),
-                JsonConvert.SerializeObject(Experiments.Completed.LastDigitOfHugeNumber.GetPeriodsIter()));
+                JsonConvert.SerializeObject(Problems.Completed.LastDigitOfHugeNumber.GetPeriodsStraightforward()),
+                JsonConvert.SerializeObject(Problems.Completed.LastDigitOfHugeNumber.GetPeriodsIter()));
         }
 
         [Test]
         public void GetPeriodsIterRecTest()
         {
             Assert.AreEqual(
-                JsonConvert.SerializeObject(Experiments.Completed.LastDigitOfHugeNumber.GetPeriodsStraightforward()),
-                JsonConvert.SerializeObject(Experiments.Completed.LastDigitOfHugeNumber.GetPeriodsIterRec()));
+                JsonConvert.SerializeObject(Problems.Completed.LastDigitOfHugeNumber.GetPeriodsStraightforward()),
+                JsonConvert.SerializeObject(Problems.Completed.LastDigitOfHugeNumber.GetPeriodsIterRec()));
         }
 
         [Test]
         public void GetPeriodsMod()
         {
-            var json = JsonConvert.SerializeObject(Experiments.Completed.LastDigitOfHugeNumber.GetPeriods(10));
+            var json = JsonConvert.SerializeObject(Problems.Completed.LastDigitOfHugeNumber.GetPeriods(10));
 
-            var periods10 = Experiments.Completed.LastDigitOfHugeNumber.GetPeriods(10);
-            var periods4 = Experiments.Completed.LastDigitOfHugeNumber.GetPeriods(4);
-            var periods3 = Experiments.Completed.LastDigitOfHugeNumber.GetPeriods(3);
-            var periods2 = Experiments.Completed.LastDigitOfHugeNumber.GetPeriods(2);
+            var periods10 = Problems.Completed.LastDigitOfHugeNumber.GetPeriods(10);
+            var periods4 = Problems.Completed.LastDigitOfHugeNumber.GetPeriods(4);
+            var periods3 = Problems.Completed.LastDigitOfHugeNumber.GetPeriods(3);
+            var periods2 = Problems.Completed.LastDigitOfHugeNumber.GetPeriods(2);
         }
     }
 }

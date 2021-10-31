@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Experiments.Completed
+namespace Problems.Completed
 {
     public class SumOfDivided
     {

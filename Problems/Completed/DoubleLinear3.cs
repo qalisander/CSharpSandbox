@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using BenchmarkDotNet.Attributes;
 
-namespace Experiments.Completed
+namespace Problems.Completed
 {
     public class DoubleLinear3
     {

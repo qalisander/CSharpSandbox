@@ -1,6 +1,6 @@
 ﻿using System;
 using BenchmarkDotNet.Running;
-using Experiments.Completed;
+using Problems.Completed;
 using NUnit.Framework;
 
 namespace NTests.BenchTests

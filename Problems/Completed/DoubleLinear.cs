@@ -2,7 +2,7 @@
 using System.Linq;
 using BenchmarkDotNet.Attributes;
 
-namespace Experiments.Completed
+namespace Problems.Completed
 {
     public class DoubleLinear
     {
@@ -34,3 +34,10 @@ namespace Experiments.Completed
         }
     }
 }
+// W                   W                   W                   C    
+//   E               S   E               S   E               S      
+//     A           I       A           I       A           I        
+//       E       C           E       C           E       C          
+//         D   S               D   S               D   S            
+//           I                   I                   I              
+    

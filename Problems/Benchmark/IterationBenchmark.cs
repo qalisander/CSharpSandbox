@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BenchmarkDotNet.Attributes;
 
-namespace Experiments.Benchmark
+namespace Problems.Benchmark
 {
     public class IterationBenchmark
     {

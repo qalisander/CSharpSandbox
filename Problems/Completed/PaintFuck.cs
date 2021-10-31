@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Experiments
+namespace Problems
 {
     // https://www.codewars.com/kata/5868a68ba44cfc763e00008d/train/csharp
     // Procedural sulution

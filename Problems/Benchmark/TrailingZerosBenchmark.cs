@@ -1,4 +1,4 @@
-﻿namespace Experiments.Benchmark
+﻿namespace Problems.Benchmark
 {
     // https: //benchmarkdotnet.org/articles/guides/choosing-run-strategy.html
     // [SimpleJob(RunStrategy.ColdStart, targetCount: 5)]

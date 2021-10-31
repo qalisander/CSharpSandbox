@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Experiments.Completed
+namespace Problems.Completed
 {
     public static class Boolfuck
     {

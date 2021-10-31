@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
-namespace Experiments.Completed
+namespace Problems.Completed
 {
     // https://www.codewars.com/kata/5518a860a73e708c0a000027/train/csharp
     // https://www.codewars.com/kata/5511b2f550906349a70004e1/train/rust

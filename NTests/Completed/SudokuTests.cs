@@ -1,6 +1,6 @@
 using System;
 using System.Linq;
-using Experiments;
+using Problems;
 using NUnit.Framework;
 
 namespace NTests

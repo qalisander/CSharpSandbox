@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Experiments.Completed
+namespace Problems.Completed
 {
     // NOTE: https://www.codewars.com/kata/585894545a8a07255e0002f1/train/csharp
     public class ScreenLockingPatterns

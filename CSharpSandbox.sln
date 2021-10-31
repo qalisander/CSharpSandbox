@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30320.27
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Experiments", "Experiments\Experiments.csproj", "{E0E3DB62-18D5-4FCB-A7AE-39682A1A6AE4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Problems", "Problems\Problems.csproj", "{E0E3DB62-18D5-4FCB-A7AE-39682A1A6AE4}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NTests", "NTests\NTests.csproj", "{B8D90584-027E-4B2A-9B39-F2B454384CB0}"
 EndProject

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 
 // https://www.codewars.com/kata/59b47ff18bcb77a4d1000076/train/csharp
-namespace Experiments.Completed
+namespace Problems.Completed
 {
     public class Tile
     {

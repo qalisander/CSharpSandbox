@@ -1,7 +1,7 @@
 ﻿using System.Linq;
 using System.Text;
 
-namespace Experiments.Completed
+namespace Problems.Completed
 {
     // https://www.codewars.com/kata/586dd26a69b6fd46dd0000c0/train/csharp
     public class MiniStringFuck

@@ -1,7 +1,7 @@
 ﻿using BenchmarkDotNet.Running;
-using Experiments.Completed;
+using Problems.Completed;
 
-namespace Experiments.Benchmark
+namespace Problems.Benchmark
 {
     public class Benchmark
     {

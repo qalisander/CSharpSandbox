@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
 
-namespace Experiments.Completed
+namespace Problems.Completed
 {
     [SimpleJob(RunStrategy.ColdStart, targetCount: 5)]
     [MinColumn, MaxColumn, MeanColumn, MedianColumn]

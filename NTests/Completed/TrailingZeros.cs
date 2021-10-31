@@ -1,4 +1,4 @@
-﻿using Experiments.Completed;
+﻿using Problems.Completed;
 using NTests.Base;
 using NUnit.Framework;
 

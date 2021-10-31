@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Experiments.Completed;
+using Problems.Completed;
 using FluentAssertions;
 using NUnit.Framework;
 

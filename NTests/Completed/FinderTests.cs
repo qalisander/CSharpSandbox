@@ -1,4 +1,4 @@
-﻿using Experiments;
+﻿using Problems;
 using NUnit.Framework;
 
 namespace NTests

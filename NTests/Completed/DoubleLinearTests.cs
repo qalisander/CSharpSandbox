@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
-using Experiments.Completed;
+using Problems.Completed;
 using NUnit.Framework;
 
 namespace NTests.Completed
@@ -48,7 +48,7 @@ namespace NTests.Completed
             testing(DoubleLinear.DblLinear(1000), 8488);         //8,5
             testing(DoubleLinear.DblLinear(10_000), 157_654);    //15
             testing(DoubleLinear.DblLinear(100_000), 2_902_779); //30
-            testing(DoubleLinear.DblLinear(10_000_000), 1_031_926_810);
+            // testing(DoubleLinear.DblLinear(10_000_000), 1_031_926_810);
         }
 
         [Test]
@@ -66,8 +66,8 @@ namespace NTests.Completed
             testing(DoubleLinear.DblLinear(100), 447);           //4,5
             testing(DoubleLinear.DblLinear(1000), 8488);         //8,5
             testing(DoubleLinear.DblLinear(10_000), 157_654);    //15
-            testing(DoubleLinear.DblLinear(100_000), 2_911_582); //30   
-            testing(DoubleLinear.DblLinear(10_000_000), 1_031_926_810); 
+            // testing(DoubleLinear.DblLinear(100_000), 2_911_582); //30
+            // testing(DoubleLinear.DblLinear(10_000_000), 1_031_926_810);
         }
 
 

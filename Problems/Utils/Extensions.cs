@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 
-namespace Experiments.Utils
+namespace Problems.Utils
 {
     public static class Extensions
     {

@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using Experiments;
+using Problems;
 using NUnit.Framework;
 
 namespace NTests.Completed

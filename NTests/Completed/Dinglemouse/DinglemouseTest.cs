@@ -21,10 +21,10 @@ namespace NTests.Completed.Dinglemouse
         public void Example(
             int expected, string TestFile, string aTrain, int aTrainPos, string bTrain, int bTrainPos, int limit)
         {
-            Experiments.Completed.Dinglemouse.HasPrint = true;
+            Problems.Completed.Dinglemouse.HasPrint = true;
             string track = File.ReadAllText(Path.Combine(GetCurrentFileDir(), TestFile));
 
-            Assert.AreEqual(expected, Experiments.Completed.Dinglemouse.TrainCrash(track, aTrain, aTrainPos, bTrain, bTrainPos, limit));
+            Assert.AreEqual(expected, Problems.Completed.Dinglemouse.TrainCrash(track, aTrain, aTrainPos, bTrain, bTrainPos, limit));
         }
 
         private string GetCurrentFileDir([CallerFilePath] string path = null) => Path.GetDirectoryName(path);

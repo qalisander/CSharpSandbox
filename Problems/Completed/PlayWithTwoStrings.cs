@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 
-namespace Experiments.Completed
+namespace Problems.Completed
 {
     // https://www.codewars.com/kata/56c30ad8585d9ab99b000c54/train/csharp
     public class PlayWithTwoStrings
