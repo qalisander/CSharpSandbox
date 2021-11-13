@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections;
+using System.Data.SqlTypes;
 using System.Linq;
+using System.Text;
 
 namespace Problems.Completed
 {
@@ -29,22 +32,18 @@ namespace Problems.Completed
             if (equations.Select(row => row.Length).Distinct().Count() != 1)
                 throw new ArgumentException("Invalid equation's length!");
 
-            var normalizedColumns = new bool[equations.Length];
-            for (var (i, j) = (0, 0); j < equations[0].Length && i < equations.Length; j++)
+            var variablesCount = equations[0].Length - 1;
+            var normalizedColumns = new int?[variablesCount];
+            for (var (i, j) = (0, 0); j < variablesCount && i < equations.Length; j++)
             {
-                var processedRowsCount = i;
-                 var (_, firstNonZeroIndex) = equations
-                    .Select((row, index) => (row, index))
-                    .Skip(processedRowsCount)
-                    .FirstOrDefault(t => t.row[j] != Fraction.Zero);
+                if (!TryGetFirstNonZero(out var firstNonZeroIndex))
+                    continue;
 
-                 if (firstNonZeroIndex == -1)
-                     continue;
-
-                normalizedColumns[i] = true;
+                normalizedColumns[j] = i;
                 Swap(ref equations[firstNonZeroIndex], ref equations[j]);
                 equations[i] = Multiply(equations[i], Fraction.One / equations[i][j]);
 
+                // TODO: create separate method
                 for (var i1 = 0; i1 < equations.Length; i1++)
                 {
                     if (i1 == i || equations[i1][j] == Fraction.Zero)
@@ -62,24 +61,56 @@ namespace Problems.Completed
                     row.Select(fr => fr * factor).ToArray();
 
                 Fraction[] Sub(Fraction[] row1, Fraction[] row2) =>
-                    row1.Zip(row2).Select(t => t.First + t.Second).ToArray();
+                    row1.Zip(row2).Select(t => t.First - t.Second).ToArray();
 
                 void Swap(ref Fraction[] row1, ref Fraction[] row2) => (row2, row1) = (row1, row2);
+
+                bool TryGetFirstNonZero(out int firstNonZero)
+                {
+                    var first = equations
+                        .Select((row, index) => (row, index))
+                        .Skip(i)
+                        .FirstOrDefault(t => t.row[j] != Fraction.Zero);
+
+                    firstNonZero = first.index;
+                    return first.row != null;
+                }
             }
 
-            throw new NotImplementedException();
+            var constSolutions = normalizedColumns
+                .Select((iNull, j) => iNull is int i ? equations[i][^1] : Fraction.Zero).ToArray();
+
+            var parametrizedSolutions = normalizedColumns
+                .Select((iNull, j) => (iNull, j))
+                .Where(t => t.iNull is null)
+                .Select(t => Enumerable
+                    .Range(0, variablesCount)
+                    .Select(i => i switch
+                    {
+                        _ when i == t.j => Fraction.One,
+                        _ when i >= equations.Length => Fraction.Zero,
+                        _ => -equations[i][t.j],
+                    })
+                    .ToArray());
+
+            var terms = parametrizedSolutions.Prepend(constSolutions).Select((solutions, i) =>
+            {
+                var multiplier = i == 0 ? "" : $"q{i}* ";
+                return multiplier + "(" + string.Join("; ", solutions.Select(fr => fr.ToString())) + ")";
+            });
+            return string.Join(" + ", terms);
         }
     }
 
     // TODO: struct?
     public class Fraction
     {
-        private readonly int _num;
-        private readonly int _denom;
+        private readonly long _num;
+        private readonly long _denom;
 
         public override int GetHashCode() => HashCode.Combine(_num, _denom);
 
-        public Fraction(int numerator, int denominator = 1)
+        public Fraction(long numerator, long denominator = 1)
         {
             if (denominator == 0)
                 throw new ArgumentException("Denominator cannot be null!");
@@ -87,7 +118,7 @@ namespace Problems.Completed
             if (denominator < 0)
                 (numerator, denominator) = (-numerator, -denominator);
 
-            var gcd = Gcd(numerator, denominator);
+            var gcd = Gcd(Math.Abs(numerator), denominator);
             _num = numerator / gcd;
             _denom = denominator / gcd;
         }
@@ -131,7 +162,7 @@ namespace Problems.Completed
 
         public override string ToString() => _denom == 1 ? $"{_num}" : $"{_num}/{_denom}";
 
-        private static int Gcd(int a, int b) => b == 0 ? a : Gcd(b, a % b);
+        private static long Gcd(long a, long b) => b == 0 ? a : Gcd(b, a % b);
 
         public static Fraction One => new Fraction(1);
         public static Fraction Zero => new Fraction(0);
@@ -141,8 +172,8 @@ namespace Problems.Completed
             var arr = str.Split("/").ToArray();
             return arr.Length switch
             {
-                1 => new Fraction(Convert.ToInt32(arr[0])),
-                2 => new Fraction(Convert.ToInt32(arr[0]), Convert.ToInt32(arr[1])),
+                1 => new Fraction(Convert.ToInt64(arr[0])),
+                2 => new Fraction(Convert.ToInt64(arr[0]), Convert.ToInt64(arr[1])),
                 _ => throw new ArgumentException($"Invalid fraction: {str}"),
             };
         }
